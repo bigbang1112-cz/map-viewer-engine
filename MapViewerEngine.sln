@@ -5,6 +5,8 @@ VisualStudioVersion = 17.4.33205.214
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MapViewerEngine", "MapViewerEngine\MapViewerEngine.csproj", "{8B824361-4511-4E9B-80FB-B20845A5D826}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GbxToolAPI", "GbxToolAPI\GbxToolAPI\GbxToolAPI.csproj", "{A04F0314-52E5-4175-9010-31310C441F70}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -15,6 +17,10 @@ Global
 		{8B824361-4511-4E9B-80FB-B20845A5D826}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{8B824361-4511-4E9B-80FB-B20845A5D826}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{8B824361-4511-4E9B-80FB-B20845A5D826}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A04F0314-52E5-4175-9010-31310C441F70}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A04F0314-52E5-4175-9010-31310C441F70}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A04F0314-52E5-4175-9010-31310C441F70}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A04F0314-52E5-4175-9010-31310C441F70}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
