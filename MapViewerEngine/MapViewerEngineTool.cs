@@ -3,7 +3,7 @@ using GbxToolAPI;
 
 namespace MapViewerEngine;
 
-public class MapViewerEngineTool : Tool
+public class MapViewerEngineTool : ITool
 {
     private readonly CGameCtnChallenge map;
 
