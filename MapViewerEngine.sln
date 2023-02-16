@@ -13,6 +13,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GbxToolAPI", "GbxToolAPI\Sr
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GbxToolAPI.Client.Generators", "GbxToolAPI\Generators\GbxToolAPI.Client.Generators\GbxToolAPI.Client.Generators.csproj", "{0672ECB3-1E30-434B-B792-AA7A8EDD8623}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MapViewerEngine.Shared", "MapViewerEngine.Shared\MapViewerEngine.Shared.csproj", "{1D14B669-0645-46C6-B778-161D179FAC8B}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -39,6 +41,10 @@ Global
 		{0672ECB3-1E30-434B-B792-AA7A8EDD8623}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{0672ECB3-1E30-434B-B792-AA7A8EDD8623}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{0672ECB3-1E30-434B-B792-AA7A8EDD8623}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1D14B669-0645-46C6-B778-161D179FAC8B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1D14B669-0645-46C6-B778-161D179FAC8B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1D14B669-0645-46C6-B778-161D179FAC8B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1D14B669-0645-46C6-B778-161D179FAC8B}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

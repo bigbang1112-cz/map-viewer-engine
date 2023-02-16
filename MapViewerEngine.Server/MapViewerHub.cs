@@ -1,27 +1,28 @@
-﻿using Microsoft.AspNetCore.SignalR;
+﻿using MapViewerEngine.Shared;
+using Microsoft.AspNetCore.SignalR;
 
 namespace MapViewerEngine.Server;
 
 public class MapViewerHub : Hub
 {
-    private readonly IMapViewerRepo repo;
+    private readonly IMapViewerRepo _repo;
 
     public MapViewerHub(IMapViewerRepo repo)
     {
-        this.repo = repo;
+        _repo = repo;
     }
 
-    public async Task SendBlockMesh(string blockName, bool ground, int variant, int subVariant, CancellationToken cancellationToken = default)
+    public async Task BlockMesh(BlockVariant block, CancellationToken cancellationToken = default)
     {
-        var mesh = await repo.GetBlockMeshAsync(blockName, ground, variant, subVariant, cancellationToken);
+        var mesh = await _repo.GetBlockMeshAsync(block, cancellationToken);
 
-        await Clients.Caller.SendAsync(nameof(SendBlockMesh), mesh, cancellationToken);
+        await Clients.Caller.SendAsync(nameof(BlockMesh), block, mesh, cancellationToken);
     }
 
-    public async Task SendMesh(Guid guid, CancellationToken cancellationToken = default)
+    public async Task Mesh(Guid guid, CancellationToken cancellationToken = default)
     {
-        var mesh = await repo.GetBlockMeshAsync(guid, cancellationToken);
+        var mesh = await _repo.GetBlockMeshAsync(guid, cancellationToken);
 
-        await Clients.Caller.SendAsync(nameof(SendMesh), mesh, cancellationToken);
+        await Clients.Caller.SendAsync(nameof(Mesh), guid, mesh, cancellationToken);
     }
 }

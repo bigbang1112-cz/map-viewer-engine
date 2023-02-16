@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net7.0</TargetFramework>
@@ -10,6 +10,7 @@
     <ProjectReference Include="..\GbxToolAPI\Generators\GbxToolAPI.Client.Generators\GbxToolAPI.Client.Generators.csproj" />
     <ProjectReference Include="..\GbxToolAPI\Src\GbxToolAPI\GbxToolAPI.csproj" />
     <ProjectReference Include="..\GbxToolAPI\Src\GbxToolAPI.Client\GbxToolAPI.Client.csproj" />
+    <ProjectReference Include="..\MapViewerEngine.Shared\MapViewerEngine.Shared.csproj" />
   </ItemGroup>
 
 </Project>

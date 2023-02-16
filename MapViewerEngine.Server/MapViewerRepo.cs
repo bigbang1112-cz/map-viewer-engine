@@ -1,10 +1,11 @@
-﻿using Microsoft.Extensions.Configuration;
+﻿using MapViewerEngine.Shared;
+using Microsoft.Extensions.Configuration;
 
 namespace MapViewerEngine.Server;
 
 public interface IMapViewerRepo
 {
-    Task<byte[]> GetBlockMeshAsync(string blockName, bool ground, int variant, int subVariant, CancellationToken cancellationToken = default);
+    Task<byte[]> GetBlockMeshAsync(BlockVariant block, CancellationToken cancellationToken = default);
     Task<byte[]> GetBlockMeshAsync(Guid guid, CancellationToken cancellationToken = default);
 }
 
@@ -17,7 +18,7 @@ public class MapViewerRepo : IMapViewerRepo
         this.config = config;
     }
 
-    public Task<byte[]> GetBlockMeshAsync(string blockName, bool ground, int variant, int subVariant, CancellationToken cancellationToken = default)
+    public Task<byte[]> GetBlockMeshAsync(BlockVariant block, CancellationToken cancellationToken = default)
     {
         throw new NotImplementedException();
     }
