@@ -1,4 +1,5 @@
-﻿using MapViewerEngine.Shared;
+﻿using MapViewerEngine.Server.Repos;
+using MapViewerEngine.Shared;
 using Microsoft.AspNetCore.SignalR;
 
 namespace MapViewerEngine.Server;
@@ -13,11 +14,13 @@ public interface IMapViewerEngineHub
 
 public class MapViewerEngineHub : Hub, IMapViewerEngineHub
 {
-    private readonly IMapViewerEngineRepo _repo;
+    private readonly IMeshRepo meshRepo;
+    private readonly IOfficialBlockMeshRepo officialBlockMeshRepo;
 
-    public MapViewerEngineHub(IMapViewerEngineRepo repo)
+    public MapViewerEngineHub(IMeshRepo meshRepo, IOfficialBlockMeshRepo officialBlockMeshRepo)
     {
-        _repo = repo;
+        this.meshRepo = meshRepo;
+        this.officialBlockMeshRepo = officialBlockMeshRepo;
     }
 
     public string Ping()
@@ -29,7 +32,7 @@ public class MapViewerEngineHub : Hub, IMapViewerEngineHub
     {
         _ = block ?? throw new ArgumentNullException(nameof(block));
 
-        var data = await _repo.GetBlockMeshDataAsync(block);
+        var data = await officialBlockMeshRepo.GetDataAsync(block);
 
         if (data is null)
         {
@@ -41,7 +44,7 @@ public class MapViewerEngineHub : Hub, IMapViewerEngineHub
 
     public async Task<byte[]> Mesh(Guid guid)
     {
-        var data = await _repo.GetMeshDataAsync(guid);
+        var data = await meshRepo.GetDataAsync(guid);
 
         if (data is null)
         {

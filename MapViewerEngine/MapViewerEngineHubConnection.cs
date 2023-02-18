@@ -8,12 +8,12 @@ namespace MapViewerEngine;
 public delegate Task BlockMeshHandler(BlockVariant block, byte[] data);
 public delegate Task MeshHandler(Guid guid, byte[] data);
 
-public partial class MapViewerEngineHub : ToolHub
+public partial class MapViewerEngineHubConnection : ToolHubConnection
 {
     public event BlockMeshHandler? BlockMesh;
     public event MeshHandler? Mesh;
 
-    public MapViewerEngineHub(string baseAddress, ILogger? logger = null) : base(baseAddress, logger)
+    public MapViewerEngineHubConnection(string baseAddress, ILogger? logger = null) : base(baseAddress, logger)
     {
         Connection.On<BlockVariant, byte[]>("BlockMesh", OnBlockMesh);
         Connection.On<Guid, byte[]>("Mesh", OnMesh);
