@@ -13,7 +13,7 @@ public partial class MapViewerEngineHub : ToolHub
     public event BlockMeshHandler? BlockMesh;
     public event MeshHandler? Mesh;
 
-    public MapViewerEngineHub(string baseAddress, ILogger<ToolHub>? logger = null) : base(baseAddress, logger)
+    public MapViewerEngineHub(string baseAddress, ILogger? logger = null) : base(baseAddress, logger)
     {
         Connection.On<BlockVariant, byte[]>("BlockMesh", OnBlockMesh);
         Connection.On<Guid, byte[]>("Mesh", OnMesh);
@@ -45,17 +45,18 @@ public partial class MapViewerEngineHub : ToolHub
         await Connection.SendAsync("Mesh", guid, cancellationToken);
     }
 
-    public async Task<byte[]> InvokeBlockMesh(string blockName,
-                                              bool ground,
-                                              int variant,
-                                              int subVariant,
-                                              CancellationToken cancellationToken = default)
+    public async Task<byte[]> InvokeBlockMesh(BlockVariant block, CancellationToken cancellationToken = default)
     {
-        return await Connection.InvokeAsync<byte[]>("BlockMesh", blockName, ground, variant, subVariant, cancellationToken);
+        return await Connection.InvokeAsync<byte[]>("BlockMesh", block, cancellationToken);
     }
 
     public async Task<byte[]> InvokeMesh(Guid guid, CancellationToken cancellationToken = default)
     {
         return await Connection.InvokeAsync<byte[]>("Mesh", guid, cancellationToken);
+    }
+
+    public async Task<string> PingAsync(CancellationToken cancellationToken = default)
+    {
+        return await Connection.InvokeAsync<string>("Ping", cancellationToken);
     }
 }

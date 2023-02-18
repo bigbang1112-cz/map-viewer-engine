@@ -16,6 +16,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
+	  <ProjectReference Include="..\GbxToolAPI\Src\GbxToolAPI.Server\GbxToolAPI.Server.csproj" />
 	  <ProjectReference Include="..\MapViewerEngine.Shared\MapViewerEngine.Shared.csproj" />
 	</ItemGroup>
 
