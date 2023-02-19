@@ -9,7 +9,6 @@ public interface IMapViewerEngineHub
     Task<byte[]> BlockMesh(BlockVariant block);
     Task<byte[]> Mesh(Guid guid);
     string Ping();
-    void Dispose();
 }
 
 public class MapViewerEngineHub : Hub, IMapViewerEngineHub
