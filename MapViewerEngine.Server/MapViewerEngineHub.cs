@@ -1,16 +1,18 @@
 ﻿using MapViewerEngine.Server.Repos;
 using MapViewerEngine.Shared;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
 
 namespace MapViewerEngine.Server;
 
 public interface IMapViewerEngineHub
 {
-    Task<byte[]> BlockMesh(BlockVariant block);
-    Task<byte[]> Mesh(Guid guid);
+    Task<byte[]?> BlockMesh(BlockVariant block);
+    Task<byte[]?> Mesh(Guid guid);
     string Ping();
 }
 
+[Authorize]
 public class MapViewerEngineHub : Hub, IMapViewerEngineHub
 {
     private readonly IMeshRepo meshRepo;
@@ -27,7 +29,7 @@ public class MapViewerEngineHub : Hub, IMapViewerEngineHub
         return "Pong";
     }
 
-    public async Task<byte[]> BlockMesh(BlockVariant block)
+    public async Task<byte[]?> BlockMesh(BlockVariant block)
     {
         _ = block ?? throw new ArgumentNullException(nameof(block));
 
@@ -41,7 +43,7 @@ public class MapViewerEngineHub : Hub, IMapViewerEngineHub
         return data;
     }
 
-    public async Task<byte[]> Mesh(Guid guid)
+    public async Task<byte[]?> Mesh(Guid guid)
     {
         var data = await meshRepo.GetDataAsync(guid);
 

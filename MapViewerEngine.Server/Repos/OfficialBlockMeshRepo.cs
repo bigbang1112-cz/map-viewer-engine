@@ -1,7 +1,9 @@
-﻿using GbxToolAPI.Server.Options;
+﻿using Dapper;
+using GbxToolAPI.Server.Options;
 using MapViewerEngine.Shared;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
+using System.Data;
 
 namespace MapViewerEngine.Server.Repos;
 
@@ -13,11 +15,13 @@ public interface IOfficialBlockMeshRepo
 public class OfficialBlockMeshRepo : IOfficialBlockMeshRepo
 {
     private readonly MapViewerEngineContext context;
+    private readonly IDbConnection dbConnection;
     private readonly IOptions<DatabaseOptions> options;
 
-    public OfficialBlockMeshRepo(MapViewerEngineContext context, IOptions<DatabaseOptions> options)
+    public OfficialBlockMeshRepo(MapViewerEngineContext context, IDbConnection dbConnection, IOptions<DatabaseOptions> options)
     {
         this.context = context;
+        this.dbConnection = dbConnection;
         this.options = options;
     }
 
@@ -36,6 +40,11 @@ public class OfficialBlockMeshRepo : IOfficialBlockMeshRepo
                 .FirstOrDefaultAsync(cancellationToken);
         }
 
-        throw new NotImplementedException();
+        return await dbConnection.QueryFirstOrDefaultAsync<byte[]?>(
+            "SELECT m.Data FROM officialblockmeshes bm " +
+            "INNER JOIN meshes m ON bm.MeshId = m.id " +
+            "WHERE bm.OfficialBlockId = (SELECT id FROM officialblocks WHERE name = @Name) " +
+            "AND bm.Ground = @Ground AND bm.Variant = @Variant AND bm.SubVariant = @SubVariant",
+            new { block.Name, block.Ground, block.Variant, block.SubVariant });
     }
 }

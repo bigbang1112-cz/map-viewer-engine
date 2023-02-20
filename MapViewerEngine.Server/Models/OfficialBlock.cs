@@ -1,4 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
+using System.Text.Json.Serialization;
 
 namespace MapViewerEngine.Server.Models;
 
@@ -14,6 +16,9 @@ public class OfficialBlock
     
     [StringLength(255)]
     public required string Name { get; set; }
+    
+    [Column(TypeName = "blob")]
+    public required byte[] Meta { get; set; }
 
-    public required ICollection<OfficialBlockMesh> OfficialBlockMeshes { get; set; }
+    [JsonIgnore] public ICollection<OfficialBlockMesh> OfficialBlockMeshes { get; set; } = Array.Empty<OfficialBlockMesh>();
 }
