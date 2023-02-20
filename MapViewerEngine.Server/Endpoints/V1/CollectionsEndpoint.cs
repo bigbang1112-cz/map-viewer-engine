@@ -34,7 +34,7 @@ public class CollectionsEndpoint : IToolEndpoint
         return Results.Ok(collection);
     }
 
-    private async Task<IResult> AddCollection(IUnitOfWork uow, Collection collection, CancellationToken cancellationToken)
+    private async Task<IResult> AddCollection(IMapViewerEngineUnitOfWork uow, Collection collection, CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(collection.Name))
         {

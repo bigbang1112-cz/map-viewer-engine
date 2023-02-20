@@ -1,4 +1,5 @@
 ﻿using Dapper;
+using GbxToolAPI.Server;
 using GbxToolAPI.Server.Options;
 using MapViewerEngine.Server.Models;
 using Microsoft.EntityFrameworkCore;
@@ -17,13 +18,13 @@ public interface ICollectionRepo
 public class CollectionRepo : ICollectionRepo
 {
     private readonly MapViewerEngineContext context;
-    private readonly IDbConnection dbConnection;
+    private readonly ISqlConnection<MapViewerEngineServer> sql;
     private readonly IOptions<DatabaseOptions> options;
 
-    public CollectionRepo(MapViewerEngineContext context, IDbConnection dbConnection, IOptions<DatabaseOptions> options)
+    public CollectionRepo(MapViewerEngineContext context, ISqlConnection<MapViewerEngineServer> sql, IOptions<DatabaseOptions> options)
     {
         this.context = context;
-        this.dbConnection = dbConnection;
+        this.sql = sql;
         this.options = options;
     }
 
@@ -36,7 +37,7 @@ public class CollectionRepo : ICollectionRepo
             return await context.Collections.ToListAsync(cancellationToken);
         }
 
-        return await dbConnection.QueryAsync<Collection>("SELECT * FROM Collections");
+        return await sql.Connection.QueryAsync<Collection>("SELECT * FROM Collections");
     }
 
     public async Task AddAsync(Collection collection, CancellationToken cancellationToken = default)
@@ -51,6 +52,6 @@ public class CollectionRepo : ICollectionRepo
             return await context.Collections.FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
         }
 
-        return await dbConnection.QueryFirstOrDefaultAsync<Collection>("SELECT * FROM Collections WHERE Id = @Id", new { Id = id });
+        return await sql.Connection.QueryFirstOrDefaultAsync<Collection>("SELECT * FROM Collections WHERE Id = @Id", new { Id = id });
     }
 }

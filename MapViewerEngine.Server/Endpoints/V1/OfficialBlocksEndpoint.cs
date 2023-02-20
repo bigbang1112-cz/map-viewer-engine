@@ -1,4 +1,6 @@
 ﻿using GbxToolAPI.Server;
+using Mapster;
+using MapViewerEngine.Server.Models.Dtos;
 using MapViewerEngine.Server.Repos;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -10,12 +12,18 @@ public class OfficialBlocksEndpoint : IToolEndpoint
 {
     public void Endpoint(IEndpointRouteBuilder app)
     {
-        app.MapGet("official-blocks", OfficialBlocks)
-            .RequireAuthorization(Policies.SuperAdminPolicy);
+        app.MapGet("official-blocks/{author}/{collection}/{name}", GetOfficialBlockByIdent);
     }
 
-    private async Task<IResult> OfficialBlocks(IOfficialBlockRepo repo, CancellationToken cancellationToken)
+    private async Task<IResult> GetOfficialBlockByIdent(string author, string collection, string name, IOfficialBlockRepo repo, CancellationToken cancellationToken)
     {
-        return Results.Ok(await repo.GetAllAsync(cancellationToken));
+        var officialBlock = await repo.GetByIdentAsync(author, collection, name, cancellationToken);
+
+        if (officialBlock is null)
+        {
+            return Results.NotFound();
+        }
+
+        return Results.Ok(officialBlock.Adapt<OfficialBlockDto>());
     }
 }

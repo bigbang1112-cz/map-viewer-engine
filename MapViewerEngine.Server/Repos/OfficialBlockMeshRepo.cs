@@ -1,4 +1,5 @@
 ﻿using Dapper;
+using GbxToolAPI.Server;
 using GbxToolAPI.Server.Options;
 using MapViewerEngine.Shared;
 using Microsoft.EntityFrameworkCore;
@@ -15,13 +16,13 @@ public interface IOfficialBlockMeshRepo
 public class OfficialBlockMeshRepo : IOfficialBlockMeshRepo
 {
     private readonly MapViewerEngineContext context;
-    private readonly IDbConnection dbConnection;
+    private readonly ISqlConnection<MapViewerEngineServer> sql;
     private readonly IOptions<DatabaseOptions> options;
 
-    public OfficialBlockMeshRepo(MapViewerEngineContext context, IDbConnection dbConnection, IOptions<DatabaseOptions> options)
+    public OfficialBlockMeshRepo(MapViewerEngineContext context, ISqlConnection<MapViewerEngineServer> sql, IOptions<DatabaseOptions> options)
     {
         this.context = context;
-        this.dbConnection = dbConnection;
+        this.sql = sql;
         this.options = options;
     }
 
@@ -40,11 +41,12 @@ public class OfficialBlockMeshRepo : IOfficialBlockMeshRepo
                 .FirstOrDefaultAsync(cancellationToken);
         }
 
-        return await dbConnection.QueryFirstOrDefaultAsync<byte[]?>(
-            "SELECT m.Data FROM officialblockmeshes bm " +
-            "INNER JOIN meshes m ON bm.MeshId = m.id " +
-            "WHERE bm.OfficialBlockId = (SELECT id FROM officialblocks WHERE name = @Name) " +
-            "AND bm.Ground = @Ground AND bm.Variant = @Variant AND bm.SubVariant = @SubVariant",
+        return await sql.Connection.QueryFirstOrDefaultAsync<byte[]?>(
+            @"SELECT m.Data 
+            FROM officialblockmeshes bm
+            INNER JOIN meshes m ON bm.MeshId = m.id
+            INNER JOIN officialblocks ob ON bm.OfficialBlockId = ob.id
+            WHERE ob.name = @Name AND bm.Ground = @Ground AND bm.Variant = @Variant AND bm.SubVariant = @SubVariant",
             new { block.Name, block.Ground, block.Variant, block.SubVariant });
     }
 }

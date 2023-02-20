@@ -1,4 +1,5 @@
 ﻿using Dapper;
+using GbxToolAPI.Server;
 using GbxToolAPI.Server.Options;
 using MapViewerEngine.Server.Models;
 using Microsoft.EntityFrameworkCore;
@@ -16,13 +17,13 @@ public interface IMeshRepo
 public class MeshRepo : IMeshRepo
 {
     private readonly MapViewerEngineContext context;
+    private readonly ISqlConnection<MapViewerEngineServer> sql;
     private readonly IOptions<DatabaseOptions> options;
-    private readonly IDbConnection dbConnection;
 
-    public MeshRepo(MapViewerEngineContext context, IDbConnection dbConnection, IOptions<DatabaseOptions> options)
+    public MeshRepo(MapViewerEngineContext context, ISqlConnection<MapViewerEngineServer> sql, IOptions<DatabaseOptions> options)
     {
         this.context = context;
-        this.dbConnection = dbConnection;
+        this.sql = sql;
         this.options = options;
     }
 
@@ -38,6 +39,6 @@ public class MeshRepo : IMeshRepo
                 .FirstOrDefaultAsync(cancellationToken);
         }
 
-        return await dbConnection.QueryFirstOrDefaultAsync<byte[]?>("SELECT Data FROM Meshes WHERE Guid = @Guid", new { Guid = guid });
+        return await sql.Connection.QueryFirstOrDefaultAsync<byte[]?>("SELECT Data FROM Meshes WHERE Guid = @Guid", new { Guid = guid });
     }
 }

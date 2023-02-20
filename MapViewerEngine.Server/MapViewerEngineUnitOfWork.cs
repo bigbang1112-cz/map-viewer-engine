@@ -1,11 +1,12 @@
-﻿using GbxToolAPI.Server.Options;
+﻿using GbxToolAPI.Server;
+using GbxToolAPI.Server.Options;
 using MapViewerEngine.Server.Repos;
 using Microsoft.Extensions.Options;
 using System.Data;
 
 namespace MapViewerEngine.Server;
 
-public interface IUnitOfWork
+public interface IMapViewerEngineUnitOfWork
 {
     ICollectionRepo Collections { get; }
     IMeshRepo Meshes { get; }
@@ -16,7 +17,7 @@ public interface IUnitOfWork
     Task SaveAsync(CancellationToken cancellationToken = default);
 }
 
-public class UnitOfWork : IUnitOfWork
+public class MapViewerEngineUnitOfWork : IMapViewerEngineUnitOfWork
 {
     private readonly MapViewerEngineContext context;
 
@@ -25,14 +26,14 @@ public class UnitOfWork : IUnitOfWork
     public IOfficialBlockMeshRepo OfficialBlockMeshes { get; }
     public IOfficialBlockRepo OfficialBlocks { get; }
 
-    public UnitOfWork(MapViewerEngineContext context, IOptions<DatabaseOptions> databaseOptions, IDbConnection dbConnection)
+    public MapViewerEngineUnitOfWork(MapViewerEngineContext context, ISqlConnection<MapViewerEngineServer> sql, IOptions<DatabaseOptions> databaseOptions)
     {
         this.context = context;
 
-        Collections = new CollectionRepo(context, dbConnection, databaseOptions);
-        Meshes = new MeshRepo(context, dbConnection, databaseOptions);
-        OfficialBlockMeshes = new OfficialBlockMeshRepo(context, dbConnection, databaseOptions);
-        OfficialBlocks = new OfficialBlockRepo(context, dbConnection, databaseOptions);
+        Collections = new CollectionRepo(context, sql, databaseOptions);
+        Meshes = new MeshRepo(context, sql, databaseOptions);
+        OfficialBlockMeshes = new OfficialBlockMeshRepo(context, sql, databaseOptions);
+        OfficialBlocks = new OfficialBlockRepo(context, sql, databaseOptions);
     }
 
     public void Save()
