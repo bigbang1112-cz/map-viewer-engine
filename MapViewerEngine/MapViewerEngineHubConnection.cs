@@ -77,7 +77,7 @@ public partial class MapViewerEngineHubConnection : ToolHubConnection
         await Connection.SendAsync("Meta", blockName, collection, author, cancellationToken);
     }
 
-    public async Task SendMetasAsync(IEnumerable<string> blockNames, string collection, string author, CancellationToken cancellationToken = default)
+    public async Task SendMetasAsync(IList<string> blockNames, string collection, string author, CancellationToken cancellationToken = default)
     {
         await Connection.SendAsync("Metas", blockNames, collection, author, cancellationToken);
     }

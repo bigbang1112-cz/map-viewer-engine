@@ -20,7 +20,8 @@ public class MapViewerEngineTool : ITool, IHasUI, IHubConnection<MapViewerEngine
     {
         var uniqueBlockNames = map.GetBlocks()
             .Select(x => x.Name)
-            .Distinct();
+            .Distinct()
+            .ToList();
 
         await HubConnection.SendMetasAsync(uniqueBlockNames, map.Collection, "Nadeo", cancellationToken);
 
@@ -29,11 +30,16 @@ public class MapViewerEngineTool : ITool, IHasUI, IHubConnection<MapViewerEngine
             .Select(x => new BlockVariant(x.Key.Name, x.Key.IsGround, x.Key.Variant.GetValueOrDefault(), x.Key.SubVariant.GetValueOrDefault()))
             .ToList();
 
-        foreach (var block in map.GetBlocks())
+        foreach (var variant in uniqueBlockVariants)
         {
-            var variant = new BlockVariant(block.Name, block.IsGround, block.Variant.GetValueOrDefault(), block.SubVariant.GetValueOrDefault());
+            try // have a client side list of accepted block names instead (to respect serverside)
+            {
+                await HubConnection.SendBlockMeshAsync(variant, cancellationToken);
+            }
+            catch
+            {
 
-            await HubConnection.SendBlockMeshAsync(variant, cancellationToken);
+            }
         }
     }
 }
