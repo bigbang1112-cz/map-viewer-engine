@@ -14,7 +14,7 @@ public interface IOfficialBlockRepo
     Task<IEnumerable<OfficialBlock>> GetByCollectionAndNameAsync(string collection, string name, CancellationToken cancellationToken = default);
     Task<OfficialBlock?> GetByIdentAsync(string author, string collection, string name, CancellationToken cancellationToken = default);
     Task<byte[]?> GetMetaByIdentAsync(string name, string collection, string author, CancellationToken cancellationToken = default);
-    Task<IEnumerable<OfficialBlockMeta>> GetMetasByMultipleIdentsAsync(string[] blockNames, string collection, string author, CancellationToken cancellationToken = default);
+    Task<IEnumerable<OfficialBlockMeta>> GetMetasByMultipleIdentsAsync(IList<string> blockNames, string collection, string author, CancellationToken cancellationToken = default);
 }
 
 public class OfficialBlockRepo : IOfficialBlockRepo
@@ -108,7 +108,7 @@ public class OfficialBlockRepo : IOfficialBlockRepo
             new { Author = author, Collection = collection, Name = name });
     }
 
-    public async Task<IEnumerable<OfficialBlockMeta>> GetMetasByMultipleIdentsAsync(string[] names, string collection, string author, CancellationToken cancellationToken = default)
+    public async Task<IEnumerable<OfficialBlockMeta>> GetMetasByMultipleIdentsAsync(IList<string> names, string collection, string author, CancellationToken cancellationToken = default)
     {
         if (IsInMemory)
         {

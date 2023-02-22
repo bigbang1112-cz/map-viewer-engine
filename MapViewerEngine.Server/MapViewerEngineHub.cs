@@ -1,6 +1,7 @@
 ﻿using MapViewerEngine.Shared;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.Extensions.Caching.Memory;
 
 namespace MapViewerEngine.Server;
 
@@ -15,10 +16,12 @@ public interface IMapViewerEngineHub
 public class MapViewerEngineHub : Hub, IMapViewerEngineHub
 {
     private readonly IMapViewerEngineUnitOfWork unitOfWork;
+    private readonly IMemoryCache cache;
 
-    public MapViewerEngineHub(IMapViewerEngineUnitOfWork unitOfWork)
+    public MapViewerEngineHub(IMapViewerEngineUnitOfWork unitOfWork, IMemoryCache cache)
     {
         this.unitOfWork = unitOfWork;
+        this.cache = cache;
     }
 
     public string Ping()
@@ -47,10 +50,18 @@ public class MapViewerEngineHub : Hub, IMapViewerEngineHub
         _ = collection ?? throw new ArgumentNullException(nameof(collection));
         _ = author ?? throw new ArgumentNullException(nameof(author));
 
-        var data = await unitOfWork.OfficialBlocks.GetMetaByIdentAsync(blockName, collection, author);
+        var cacheKey = $"Meta:{blockName}:{collection}:{author}";
+
+        var data = await cache.GetOrCreateAsync(cacheKey, async entry =>
+        {
+            entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromHours(1);
+            return await unitOfWork.OfficialBlocks.GetMetaByIdentAsync(blockName, collection, author);
+        });
 
         if (data is null)
         {
+            cache.Remove(cacheKey);
+
             // Shouldn't happen or subject to more intense rate limiting
             throw new Exception("Shouldn't happen or subject to more intense rate limiting");
         }
@@ -69,7 +80,37 @@ public class MapViewerEngineHub : Hub, IMapViewerEngineHub
             throw new ArgumentException("Must be between 1 and 100 block names", nameof(blockNames));
         }
 
-        var data = await unitOfWork.OfficialBlocks.GetMetasByMultipleIdentsAsync(blockNames, collection, author);
+        if (blockNames.Length == 1)
+        {
+            await Meta(blockNames[0], collection, author);
+            return;
+        }
+
+        var metasToRequest = new List<string>();
+        var data = new List<OfficialBlockMeta>();
+
+        foreach (var blockName in blockNames)
+        {
+            if (string.IsNullOrWhiteSpace(blockName))
+            {
+                throw new ArgumentException("Block name cannot be null or whitespace", nameof(blockNames));
+            }
+
+            if (cache.TryGetValue($"Meta:{blockName}:{collection}:{author}", out byte[]? blockMeta) && blockMeta is not null)
+            {
+                data.Add(new OfficialBlockMeta() { Name = blockName, Meta = blockMeta });
+            }
+            else
+            {
+                metasToRequest.Add(blockName);
+            }
+        }
+
+        foreach (var meta in await unitOfWork.OfficialBlocks.GetMetasByMultipleIdentsAsync(metasToRequest, collection, author))
+        {
+            data.Add(meta);
+            cache.Set($"Meta:{meta.Name}:{collection}:{author}", meta.Meta);
+        }
 
         if (!data.Any())
         {
