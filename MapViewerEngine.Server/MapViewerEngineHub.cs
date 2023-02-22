@@ -52,19 +52,21 @@ public class MapViewerEngineHub : Hub, IMapViewerEngineHub
 
         var cacheKey = $"Meta:{blockName}:{collection}:{author}";
 
-        var data = await cache.GetOrCreateAsync(cacheKey, async entry =>
+        if (cache.TryGetValue(cacheKey, out byte[]? blockMeta) && blockMeta is not null)
         {
-            entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromHours(1);
-            return await unitOfWork.OfficialBlocks.GetMetaByIdentAsync(blockName, collection, author);
-        });
+            await Clients.Caller.SendAsync("Meta", blockName, collection, blockMeta);
+            return;
+        }
+
+        var data = await unitOfWork.OfficialBlocks.GetMetaByIdentAsync(blockName, collection, author);
 
         if (data is null)
         {
-            cache.Remove(cacheKey);
-
             // Shouldn't happen or subject to more intense rate limiting
             throw new Exception("Shouldn't happen or subject to more intense rate limiting");
         }
+
+        cache.Set(cacheKey, data, TimeSpan.FromHours(1));
         
         await Clients.Caller.SendAsync("Meta", blockName, collection, data);
     }
@@ -109,10 +111,10 @@ public class MapViewerEngineHub : Hub, IMapViewerEngineHub
         foreach (var meta in await unitOfWork.OfficialBlocks.GetMetasByMultipleIdentsAsync(metasToRequest, collection, author))
         {
             data.Add(meta);
-            cache.Set($"Meta:{meta.Name}:{collection}:{author}", meta.Meta);
+            cache.Set($"Meta:{meta.Name}:{collection}:{author}", meta.Meta, TimeSpan.FromHours(1));
         }
 
-        if (!data.Any())
+        if (data.Count == 0)
         {
             throw new Exception("Shouldn't happen or subject to more intense rate limiting");
         }
