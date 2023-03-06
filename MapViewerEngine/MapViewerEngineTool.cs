@@ -5,6 +5,8 @@ using MapViewerEngine.Shared;
 
 namespace MapViewerEngine;
 
+[ToolName("Map Viewer Engine")]
+[ToolDescription("View maps in a web browser.")]
 public class MapViewerEngineTool : ITool, IHasUI, IHubConnection<MapViewerEngineHubConnection>
 {
     private readonly CGameCtnChallenge map;
