@@ -1,11 +1,9 @@
 ﻿using Dapper;
 using GbxToolAPI.Server;
 using GbxToolAPI.Server.Options;
-using MapViewerEngine.Server.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using System.Data;
-using System.Data.Common;
 
 namespace MapViewerEngine.Server.Repos;
 

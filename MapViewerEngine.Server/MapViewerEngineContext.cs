@@ -12,7 +12,7 @@ public class MapViewerEngineContext : DbContext
     public DbSet<OfficialBlockMesh> OfficialBlockMeshes { get; set; }
     public DbSet<OfficialItemMesh> OfficialItemMeshes { get; set; }
 
-    public MapViewerEngineContext(DbContextOptions options) : base(options)
+    public MapViewerEngineContext(DbContextOptions<MapViewerEngineContext> options) : base(options)
     {
     }
 }
