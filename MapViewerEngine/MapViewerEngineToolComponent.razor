@@ -1,17 +1,164 @@
 ﻿@using System.Globalization;
 @using GBX.NET;
+@using GBX.NET.Engines.Game;
+@using System.Runtime.InteropServices.JavaScript;
+@using MapViewerEngine.Shared;
 
 @inherits ToolComponentBase<MapViewerEngineTool>
+@implements IAsyncDisposable
+
+@inject IJSRuntime JS
+@inject IDynamicScriptService DynamicScript
+@inject MapViewerEngineHubConnection HubConnection
 
 <div class="container">
-    <h2>
-        Map Viewer Engine
-    </h2>
-    <div style="display: flex;gap: 10px;">
-        
-    </div>
+    <div id="stats"></div>
+
+    @if (Exc is not null)
+    {
+        <div style="position: absolute;">@Exc</div>
+    }
+
+    <canvas></canvas>
 </div>
 
 @code {
-    
+    private MapViewerEngineTool? tool;
+
+    public MapViewerEngineTool Tool => tool ?? throw new Exception();
+
+    public string? Exc { get; set; }
+
+    protected override void OnInitialized()
+    {
+        var map = this.GbxSelection.FirstOrDefault()?.Object?.Node as CGameCtnChallenge;
+
+        if (map is null)
+        {
+            return;
+        }
+
+        tool = new MapViewerEngineTool(map) { HubConnection = HubConnection };
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+        {
+            return;
+        }
+
+        await JSHost.ImportAsync("Solid", "../_content/MapViewerEngine/js/solid.js");
+
+        await DynamicScript.SpawnScriptsAsync(
+            new("https://unpkg.com/three@0.149.0/build/three.min.js", "three-js"),
+            new("https://mrdoob.github.io/stats.js/build/stats.min.js", "stats-js"),
+            new("_content/MapViewerEngine/js/main.js", "mapviewerengine-js")
+        );
+
+        while (true)
+        {
+            await Task.Delay(20);
+
+            try
+            {
+                await JS.InvokeVoidAsync("init");
+                break;
+            }
+            catch
+            {
+
+            }
+        }
+
+        await JS.InvokeVoidAsync("create_3d_renderer");
+        await JS.InvokeVoidAsync("track_general_events");
+        await JS.InvokeVoidAsync("create_cam", 64);
+        await JS.InvokeVoidAsync("create_stats");
+        await JS.InvokeVoidAsync("animate");
+        await JS.InvokeVoidAsync("spawn_sample_objects");
+
+        if (tool is null)
+        {
+            return;
+        }
+
+        await JS.InvokeVoidAsync("move_cam", Tool.AbsoluteTrueMapCenter.X, Tool.AbsoluteTrueMapCenter.Y, Tool.AbsoluteTrueMapCenter.Z);
+
+        await HubConnection.StartAsync();
+        HubConnection.BlockMesh += SaveBlockMesh;
+        HubConnection.Metas += SaveMetas;
+
+        await Tool.LoadAsync();
+
+    }
+
+    protected override async ValueTask DisposeAsync(bool disposing)
+    {
+        if (tool is not null)
+        {
+            tool.HubConnection.BlockMesh -= SaveBlockMesh;
+        }
+
+        await JS.InvokeVoidAsync("disposeScene");
+        await base.DisposeAsync(disposing);
+    }
+
+    private async Task SaveBlockMesh(BlockVariant block, byte[] data)
+    {
+        try
+        {
+            var obj = await Solid.ParseAsync(data, Tool.BlockCountPerModel[block]);
+
+            MapViewerEngineTool.CachedSolids.Add(block, obj);
+
+            if (MapViewerEngineTool.CachedMetas.TryGetValue(block.Name, out var meta))
+            {
+                Tool.InstantiateSolids(obj, block, meta);
+            }
+            else if (MapViewerEngineTool.SolidsToInstantiateLater.TryGetValue(block.Name, out var list))
+            {
+                list.Add((block, obj));
+            }
+            else
+            {
+                MapViewerEngineTool.SolidsToInstantiateLater.Add(block.Name, new List<(BlockVariant, JSObject)> { (block, obj) });
+            }
+        }
+        catch (Exception ex)
+        {
+            Exc = ex.ToString();
+            StateHasChanged();
+        }
+    }
+
+    private async Task SaveMetas(OfficialBlockMeta[] metas)
+    {
+        foreach (var meta in metas)
+        {
+            Meta m;
+
+            try
+            {
+                m = Meta.Parse(meta.Meta);
+                MapViewerEngineTool.CachedMetas[meta.Name] = m;
+            }
+            catch (Exception ex)
+            {
+                Exc = ex.ToString();
+                StateHasChanged();
+                continue;
+            }
+
+            if (MapViewerEngineTool.SolidsToInstantiateLater.TryGetValue(meta.Name, out var list))
+            {
+                foreach (var (block, obj) in list)
+                {
+                    Tool.InstantiateSolids(obj, block, m);
+                }
+
+                MapViewerEngineTool.SolidsToInstantiateLater.Remove(meta.Name);
+            }
+        }
+    }
 }

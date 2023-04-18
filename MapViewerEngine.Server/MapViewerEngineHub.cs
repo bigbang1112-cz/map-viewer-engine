@@ -12,7 +12,7 @@ public interface IMapViewerEngineHub
     string Ping();
 }
 
-[Authorize]
+//[Authorize]
 public class MapViewerEngineHub : Hub, IMapViewerEngineHub
 {
     private readonly IMapViewerEngineUnitOfWork unitOfWork;
