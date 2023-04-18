@@ -31,7 +31,7 @@ public class MapViewerEngineTool : ITool, IHasUI, IHubConnection<MapViewerEngine
     public MapViewerEngineTool(CGameCtnChallenge map)
 	{
         Map = map;
-        EnvBlockSize = map.Collection.GetBlockSize();
+        EnvBlockSize = GetBlockSize(map);
         TrueMapSize = GetTrueMapSize(map, out var lowerCoord, out var higherCoord);
         TrueMapCenter = lowerCoord + ((higherCoord.X - lowerCoord.X) / 2, higherCoord.Y, (higherCoord.Z - lowerCoord.Z) / 2);
         AbsoluteTrueMapCenter = TrueMapCenter * EnvBlockSize + (EnvBlockSize * 0.5f);
@@ -40,6 +40,16 @@ public class MapViewerEngineTool : ITool, IHasUI, IHubConnection<MapViewerEngine
             .GroupBy(x => new { x.Name, x.IsGround, x.Variant, x.SubVariant })
             .ToDictionary(x => new BlockVariant(x.Key.Name, x.Key.IsGround, x.Key.Variant.GetValueOrDefault(), x.Key.SubVariant.GetValueOrDefault()), x => x.Count());
     }
+
+    private static Int3 GetBlockSize(CGameCtnChallenge map) =>map.Collection.ToString() switch
+    {
+        "Desert" or "Speed" or "Snow" or "Alpine" or "Rally" => (32, 16, 32),
+        "Island" => (64, 8, 64),
+        "Bay" or "Stadium" or "Valley" or "Lagoon" or "Stadium2020" => (32, 8, 32),
+        "Coast" => (16, 4, 16),
+        "Canyon" => (64, 16, 64),
+        _ => throw new NotSupportedException("Block size not supported for this collection"),
+    };
 
     private static Int3 GetTrueMapSize(CGameCtnChallenge map, out Int3 lowerCoord, out Int3 higherCoord)
     {
