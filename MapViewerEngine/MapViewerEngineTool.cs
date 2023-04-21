@@ -2,8 +2,9 @@
 using GBX.NET.Engines.Game;
 using GbxToolAPI;
 using GbxToolAPI.Client;
+using MapViewerEngine.Modules;
 using MapViewerEngine.Shared;
-using System.Reflection.Metadata.Ecma335;
+using System.Linq;
 using System.Runtime.InteropServices.JavaScript;
 using System.Runtime.Versioning;
 
@@ -27,6 +28,8 @@ public class MapViewerEngineTool : ITool, IHasUI, IHubConnection<MapViewerEngine
     public static readonly Dictionary<BlockVariant, JSObject> CachedSolids = new();
     public static readonly Dictionary<string, Meta> CachedMetas = new();
     public static readonly Dictionary<string, List<(BlockVariant, JSObject)>> SolidsToInstantiateLater = new();
+    public static readonly Dictionary<string, JSObject?> CachedShaders = new();
+    public static readonly Dictionary<string, bool> RequestedShaders = new();
 
     public MapViewerEngineTool(CGameCtnChallenge map)
 	{
@@ -41,7 +44,7 @@ public class MapViewerEngineTool : ITool, IHasUI, IHubConnection<MapViewerEngine
             .ToDictionary(x => new BlockVariant(x.Key.Name, x.Key.IsGround, x.Key.Variant.GetValueOrDefault(), x.Key.SubVariant.GetValueOrDefault()), x => x.Count());
     }
 
-    private static Int3 GetBlockSize(CGameCtnChallenge map) =>map.Collection.ToString() switch
+    private static Int3 GetBlockSize(CGameCtnChallenge map) => map.Collection.ToString() switch
     {
         "Desert" or "Speed" or "Snow" or "Alpine" or "Rally" => (32, 16, 32),
         "Island" => (64, 8, 64),
@@ -90,7 +93,7 @@ public class MapViewerEngineTool : ITool, IHasUI, IHubConnection<MapViewerEngine
         {
             if (CachedSolids.TryGetValue(variant, out var obj))
             {
-                Solid.AddToScene(obj);
+                Renderer.AddToScene(obj);
 
                 if (CachedMetas.TryGetValue(variant.Name, out var meta))
                 {
@@ -122,16 +125,27 @@ public class MapViewerEngineTool : ITool, IHasUI, IHubConnection<MapViewerEngine
         }
     }
 
+    private static readonly Dictionary<string, int> frontierScrollBlocks = new()
+    {
+        { "BayEsplanade", 4 },
+        { "CoastDirtCliff", 3 },
+        { "CoastWaterCliff", 3 },
+        { "IslandHills6", 6 },
+        { "StadiumDirtHill", 4 },
+        { "DesertToDesert", 6 }
+    };
+
     public void InstantiateSolids(JSObject tree, BlockVariant variant, Meta meta)
     {
         var blockSize = variant.Ground ? meta.GroundBlockSize : meta.AirBlockSize;
 
-        foreach (var b in Map.GetBlocks().Where(x => x.Name == variant.Name && x.IsGround == variant.Ground && x.Variant == variant.Variant && x.SubVariant == variant.SubVariant))
-        {
-            Solid.Instantiate(tree,
-                b.Coord.X * EnvBlockSize.X, b.Coord.Y * EnvBlockSize.Y, b.Coord.Z * EnvBlockSize.Z,
-                blockSize.X * EnvBlockSize.X, blockSize.Z * EnvBlockSize.Z,
-                (int)b.Direction);
-        }
+        _ = frontierScrollBlocks.TryGetValue(variant.Name, out var offsetY);
+        
+        var blockPlacements = Map.GetBlocks()
+            .Where(x => x.Name == variant.Name && x.IsGround == variant.Ground && x.Variant == variant.Variant && x.SubVariant == variant.SubVariant)
+            .Select(x => (x.Coord.X << 24) | ((x.Coord.Y - offsetY) << 16) | (x.Coord.Z << 8) | ((int)x.Direction & 0x0F))
+            .ToArray();
+
+        Solid.Instantiate(tree, blockPlacements, blockSize.X, blockSize.Z, EnvBlockSize.X, EnvBlockSize.Y, EnvBlockSize.Z);
     }
 }

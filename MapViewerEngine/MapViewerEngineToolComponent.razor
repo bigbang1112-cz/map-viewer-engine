@@ -2,6 +2,7 @@
 @using GBX.NET;
 @using GBX.NET.Engines.Game;
 @using System.Runtime.InteropServices.JavaScript;
+@using MapViewerEngine.Modules;
 @using MapViewerEngine.Shared;
 
 @inherits ToolComponentBase<MapViewerEngineTool>
@@ -12,7 +13,18 @@
 @inject MapViewerEngineHubConnection HubConnection
 
 <div class="container">
-    <div id="stats"></div>
+    <div class="rectangle info-panel">
+        <div>FPS:</div>
+        <div>@FPS</div>
+        <div>Calls:</div>
+        <div>@Calls</div>
+        <div>Triangles:</div>
+        <div>@Triangles</div>
+        <div>Geometries:</div>
+        <div>@Geometries</div>
+        <div>Textures:</div>
+        <div>@Textures</div>
+    </div>
 
     @if (Exc is not null)
     {
@@ -23,14 +35,26 @@
 </div>
 
 @code {
+    private Timer? timer;
     private MapViewerEngineTool? tool;
+
+    private JSObject? renderer;
 
     public MapViewerEngineTool Tool => tool ?? throw new Exception();
 
     public string? Exc { get; set; }
 
+    public int RefreshInterval { get; set; } = 500;
+    public int FPS { get; private set; }
+    public int Calls { get; private set; }
+    public int Triangles { get; private set; }
+    public int Geometries { get; private set; }
+    public int Textures { get; private set; }
+
     protected override void OnInitialized()
     {
+        timer = new Timer(TimerCallback, null, 0, RefreshInterval);
+
         var map = this.GbxSelection.FirstOrDefault()?.Object?.Node as CGameCtnChallenge;
 
         if (map is null)
@@ -48,49 +72,68 @@
             return;
         }
 
-        await JSHost.ImportAsync("Solid", "../_content/MapViewerEngine/js/solid.js");
+        await JSHost.ImportAsync("ThreeJS", "https://unpkg.com/three@0.149.0/build/three.min.js");
+        await JSHost.ImportAsync(nameof(Renderer), "../_content/MapViewerEngine/js/renderer.js");
+        await JSHost.ImportAsync(nameof(Cam), "../_content/MapViewerEngine/js/cam.js");
+        await JSHost.ImportAsync(nameof(Solid), "../_content/MapViewerEngine/js/solid.js");
 
-        await DynamicScript.SpawnScriptsAsync(
-            new("https://unpkg.com/three@0.149.0/build/three.min.js", "three-js"),
-            new("https://mrdoob.github.io/stats.js/build/stats.min.js", "stats-js"),
-            new("_content/MapViewerEngine/js/main.js", "mapviewerengine-js")
-        );
+        renderer = Renderer.Create();
+        Renderer.CreateScene();
+        var cam = Cam.Create(distance: 64);
 
-        while (true)
-        {
-            await Task.Delay(20);
+        Renderer.SpawnSampleObjects();
 
-            try
-            {
-                await JS.InvokeVoidAsync("init");
-                break;
-            }
-            catch
-            {
-
-            }
-        }
-
-        await JS.InvokeVoidAsync("create_3d_renderer");
-        await JS.InvokeVoidAsync("track_general_events");
-        await JS.InvokeVoidAsync("create_cam", 64);
-        await JS.InvokeVoidAsync("create_stats");
-        await JS.InvokeVoidAsync("animate");
-        await JS.InvokeVoidAsync("spawn_sample_objects");
+        Renderer.Animate();
 
         if (tool is null)
         {
             return;
         }
 
-        await JS.InvokeVoidAsync("move_cam", Tool.AbsoluteTrueMapCenter.X, Tool.AbsoluteTrueMapCenter.Y, Tool.AbsoluteTrueMapCenter.Z);
+        Cam.Move(Tool.AbsoluteTrueMapCenter.X, Tool.AbsoluteTrueMapCenter.Y, Tool.AbsoluteTrueMapCenter.Z);
 
         await HubConnection.StartAsync();
         HubConnection.BlockMesh += SaveBlockMesh;
         HubConnection.Metas += SaveMetas;
+        HubConnection.Shader += SaveShader;
 
         await Tool.LoadAsync();
+    }
 
+    private int? framesBefore;
+
+    private void TimerCallback(object? state)
+    {
+        var info = renderer?.GetPropertyAsJSObject("info");
+
+        if (info is null)
+        {
+            return;
+        }
+
+        var infoRender = info.GetPropertyAsJSObject("render");
+
+        if (infoRender is not null)
+        {
+            var framesNow = infoRender.GetPropertyAsInt32("frame");
+
+            FPS = (framesNow - framesBefore.GetValueOrDefault(framesNow)) * (1000 / RefreshInterval);
+
+            framesBefore = framesNow;
+
+            Calls = infoRender.GetPropertyAsInt32("calls");
+            Triangles = infoRender.GetPropertyAsInt32("triangles");
+        }
+
+        var infoMemory = info.GetPropertyAsJSObject("memory");
+
+        if (infoMemory is not null)
+        {
+            Geometries = infoMemory.GetPropertyAsInt32("geometries");
+            Textures = infoMemory.GetPropertyAsInt32("textures");
+        }
+
+        StateHasChanged();
     }
 
     protected override async ValueTask DisposeAsync(bool disposing)
@@ -98,9 +141,13 @@
         if (tool is not null)
         {
             tool.HubConnection.BlockMesh -= SaveBlockMesh;
+            tool.HubConnection.Metas -= SaveMetas;
+            tool.HubConnection.Shader -= SaveShader;
         }
 
-        await JS.InvokeVoidAsync("disposeScene");
+        timer?.Dispose();
+        Renderer.Dispose();
+
         await base.DisposeAsync(disposing);
     }
 
@@ -109,6 +156,8 @@
         try
         {
             var obj = await Solid.ParseAsync(data, Tool.BlockCountPerModel[block]);
+
+            Solid.AddUserData(obj, block.Name, block.Ground, block.Variant, block.SubVariant);
 
             MapViewerEngineTool.CachedSolids.Add(block, obj);
 
@@ -124,12 +173,30 @@
             {
                 MapViewerEngineTool.SolidsToInstantiateLater.Add(block.Name, new List<(BlockVariant, JSObject)> { (block, obj) });
             }
+
+            Renderer.AddToScene(obj);
+
+            foreach (var requested in MapViewerEngineTool.RequestedShaders)
+            {
+                if (!requested.Value)
+                {
+                    await HubConnection.SendShaderAsync(requested.Key);
+                    MapViewerEngineTool.RequestedShaders[requested.Key] = true;
+                }
+            }
+
+            await Task.Delay(10);
         }
         catch (Exception ex)
         {
             Exc = ex.ToString();
             StateHasChanged();
         }
+    }
+
+    private async Task SaveShader(string shaderName, byte[] data)
+    {
+        
     }
 
     private async Task SaveMetas(OfficialBlockMeta[] metas)

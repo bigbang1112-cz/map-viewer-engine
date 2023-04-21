@@ -9,6 +9,7 @@ public delegate Task BlockMeshHandler(BlockVariant block, byte[] data);
 public delegate Task MeshHandler(Guid guid, byte[] data);
 public delegate Task MetaHandler(string blockName, string collection, byte[] data);
 public delegate Task MetasHandler(OfficialBlockMeta[] metas);
+public delegate Task ShaderHandler(string shaderName, byte[] data);
 
 public partial class MapViewerEngineHubConnection : ToolHubConnection
 {
@@ -16,6 +17,7 @@ public partial class MapViewerEngineHubConnection : ToolHubConnection
     public event MeshHandler? Mesh;
     public event MetaHandler? Meta;
     public event MetasHandler? Metas;
+    public event ShaderHandler? Shader;
 
     public MapViewerEngineHubConnection(string baseAddress, ILogger? logger = null) : base(baseAddress, logger)
     {
@@ -23,6 +25,7 @@ public partial class MapViewerEngineHubConnection : ToolHubConnection
         Connection.On<Guid, byte[]>("Mesh", OnMesh);
         Connection.On<string, string, byte[]>("Meta", OnMeta);
         Connection.On<OfficialBlockMeta[]>("Metas", OnMetas);
+        Connection.On<string, byte[]>("Shader", OnShader);
     }
 
     public async Task<string> PingAsync(CancellationToken cancellationToken = default)
@@ -62,6 +65,14 @@ public partial class MapViewerEngineHubConnection : ToolHubConnection
         }
     }
 
+    protected virtual async Task OnShader(string shaderName, byte[] data)
+    {
+        if (Shader is not null)
+        {
+            await Shader.Invoke(shaderName, data);
+        }
+    }
+
     public async Task SendBlockMeshAsync(BlockVariant block, CancellationToken cancellationToken = default)
     {
         await Connection.SendAsync("BlockMesh", block, cancellationToken);
@@ -80,5 +91,10 @@ public partial class MapViewerEngineHubConnection : ToolHubConnection
     public async Task SendMetasAsync(IList<string> blockNames, string collection, string author, CancellationToken cancellationToken = default)
     {
         await Connection.SendAsync("Metas", blockNames, collection, author, cancellationToken);
+    }
+
+    public async Task SendShaderAsync(string shader, CancellationToken cancellationToken = default)
+    {
+        await Connection.SendAsync("Shader", shader, cancellationToken);
     }
 }

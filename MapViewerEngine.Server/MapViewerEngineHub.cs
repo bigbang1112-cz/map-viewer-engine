@@ -121,4 +121,29 @@ public class MapViewerEngineHub : Hub, IMapViewerEngineHub
 
         await Clients.Caller.SendAsync("Metas", data);
     }
+
+    public async Task Shader(string shaderName)
+    {
+        _ = shaderName ?? throw new ArgumentNullException(nameof(shaderName));
+
+        var cacheKey = $"Shader:{shaderName}";
+
+        if (cache.TryGetValue(cacheKey, out byte[]? data) && data is not null)
+        {
+            await Clients.Caller.SendAsync("Shader", shaderName, data);
+            return;
+        }
+
+        data = await unitOfWork.OfficialShaders.GetByNameAsync(shaderName);
+
+        if (data is null)
+        {
+            // Shouldn't happen or subject to more intense rate limiting
+            throw new Exception($"Shouldn't happen or subject to more intense rate limiting ({shaderName})");
+        }
+
+        cache.Set(cacheKey, data, TimeSpan.FromHours(1));
+
+        await Clients.Caller.SendAsync("Shader", shaderName, data);
+    }
 }

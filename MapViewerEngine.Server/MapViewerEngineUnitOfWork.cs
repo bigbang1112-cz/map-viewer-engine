@@ -12,6 +12,7 @@ public interface IMapViewerEngineUnitOfWork
     IMeshRepo Meshes { get; }
     IOfficialBlockMeshRepo OfficialBlockMeshes { get; }
     IOfficialBlockRepo OfficialBlocks { get; }
+    IOfficialShaderRepo OfficialShaders { get; }
 
     void Save();
     Task SaveAsync(CancellationToken cancellationToken = default);
@@ -25,6 +26,7 @@ public class MapViewerEngineUnitOfWork : IMapViewerEngineUnitOfWork
     public IMeshRepo Meshes { get; }
     public IOfficialBlockMeshRepo OfficialBlockMeshes { get; }
     public IOfficialBlockRepo OfficialBlocks { get; }
+    public IOfficialShaderRepo OfficialShaders { get; }
 
     public MapViewerEngineUnitOfWork(MapViewerEngineContext context, ISqlConnection<MapViewerEngineServer> sql, IOptions<DatabaseOptions> databaseOptions)
     {
@@ -34,6 +36,7 @@ public class MapViewerEngineUnitOfWork : IMapViewerEngineUnitOfWork
         Meshes = new MeshRepo(context, sql, databaseOptions);
         OfficialBlockMeshes = new OfficialBlockMeshRepo(context, sql, databaseOptions);
         OfficialBlocks = new OfficialBlockRepo(context, sql, databaseOptions);
+        OfficialShaders = new OfficialShaderRepo(context, sql, databaseOptions);
     }
 
     public void Save()

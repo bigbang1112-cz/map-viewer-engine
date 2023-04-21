@@ -1,3 +1,7 @@
+const solid_instances = [];
+
+const material = new THREE.MeshStandardMaterial({ color: 0xCCCCCC });
+
 export function create_tree() {
     return new THREE.Object3D();
 }
@@ -16,10 +20,6 @@ export function wrap_tree(tree) {
     return new_tree;
 }
 
-export function add_to_scene(tree) {
-    scene.add(tree);
-}
-
 export function set_tree_pos(tree, x, y, z) {
     tree.position.set(x, y, z);
 }
@@ -36,41 +36,162 @@ export function add_lod(lod_tree, level_tree, distance) {
     lod_tree.addLevel(level_tree, distance);
 }
 
-export function create_visual(verts, inds, expected_block_count) {
-    const geometry = new THREE.BufferGeometry();
+export function create_visual(vertData, indData, uvData, expected_block_count) {
 
+    var verts = new Float32Array(vertData.length / 4);
+    var vertDataView = new DataView(vertData.slice().buffer);
+    for (var i = 0; i < vertData.length; i += 4) {
+        verts[i / 4] = vertDataView.getFloat32(i, true);
+    }
+
+    var inds = new Int32Array(indData.length);
+    indData.copyTo(inds);
+
+    const geometry = new THREE.BufferGeometry();
     geometry.setIndex(new THREE.Uint32BufferAttribute(inds, 1));
     geometry.setAttribute('position', new THREE.Float32BufferAttribute(verts, 3));
+
+    var vertCount = verts.length / 3;
+    var uvSetCount = uvData.length / 8 / vertCount;
+    var uvBufferCount = uvData.length / uvSetCount;
+
+    for (var i = 0; i < uvSetCount; i++) {
+        var offset = i * uvBufferCount;
+        var uvDataView = new DataView(uvData.slice(offset, offset + uvBufferCount).buffer);
+        var uvs = new Float32Array(uvBufferCount / 4);
+        for (var i = 0; i < uvBufferCount; i += 4) {
+            uvs[i / 4] = uvDataView.getFloat32(i, true);
+        }
+
+        geometry.setAttribute('uv' + (i + 1), new THREE.Float32BufferAttribute(uvs, 2));
+    }
+
     geometry.computeVertexNormals();
 
-    const material = new THREE.MeshStandardMaterial({ color: 0xCCCCCC });
-
-    const mesh = new THREE.Mesh(geometry, material);
+    const mesh = new THREE.InstancedMesh(geometry, material, expected_block_count);
     mesh.receiveShadow = true;
     mesh.castShadow = true;
 
     return mesh;
 }
 
-export function instantiate(tree, x, y, z, block_size_x, block_size_z, dir) {
-    let clone = tree.clone();
-    clone.visible = true;
+export function instantiate(tree, placements, bSizeX, bSizeZ, ebSizeX, ebSizeY, ebSizeZ) {
+    tree.updateMatrix();
+    tree.updateMatrixWorld();
+    
+    for (let i = 0; i < tree.children.length; i++) {
+        instantiate(tree.children[i], placements, bSizeX, bSizeZ, ebSizeX, ebSizeY, ebSizeZ);
+    }
 
-    clone.position.set(x, y, z);
+    if (!tree.isInstancedMesh) {
+        return;
+    }
+    
+    for (let i = 0; i < placements.length; i++) {
+        var blockPlacement = placements[i];
 
-    clone.rotateY(-dir * Math.PI / 2);
+        var x = (blockPlacement >> 24) & 0xFF;
+        var y = (blockPlacement >> 16) & 0xFF;
+        var z = (blockPlacement >> 8) & 0xFF;
+        var direction = blockPlacement & 0x0F;
 
-    if (dir === 1) {
-        clone.translateZ(-block_size_z);
+        var worldMatrix = new THREE.Matrix4().copy(tree.matrixWorld);
+
+        var normalizedMatrix = new THREE.Matrix4().copy(worldMatrix).invert().multiply(tree.matrix);
+
+        var placementMatrix = getBlockPlacementMatrix(
+            x * ebSizeX,
+            y * ebSizeY,
+            z * ebSizeZ,
+            direction,
+            bSizeX * ebSizeX,
+            bSizeZ * ebSizeZ);
+
+        var preFinalMatrix = normalizedMatrix.multiply(placementMatrix).multiply(worldMatrix);
+
+        tree.setMatrixAt(i, preFinalMatrix);
+    }
+
+    tree.instanceMatrix.needsUpdate = true;
+}
+
+function getBlockPlacementMatrix(x, y, z, dir, bSizeX, bSizeZ) {
+    const matrix = new THREE.Matrix4();
+
+    matrix.makeRotationY(-dir * Math.PI / 2);
+
+    if (dir === 0) {
+        matrix.setPosition(x, y, z);
+    }
+    else if (dir === 1) {
+        matrix.setPosition(x + bSizeX, y, z);
     }
     else if (dir === 2) {
-        clone.translateX(-block_size_x);
-        clone.translateZ(-block_size_z);
+        matrix.setPosition(x+bSizeX, y, z+bSizeZ);
     }
     else if (dir === 3) {
-        clone.translateX(-block_size_x);
+        matrix.setPosition(x, y, z + bSizeZ);
     }
 
-    solid_instances.push(clone);
-    scene.add(clone);
+    return matrix;
+}
+
+export function setUserData(tree, treeName, shaderName) {
+    tree.userData = {
+        treeName: treeName,
+        shaderName: shaderName
+    };
+}
+
+export function addUserData(tree, name, isGround, variant, subVariant) {
+    tree.userData.type = "BlockVariant";
+    tree.userData.name = name;
+    tree.userData.isGround = isGround;
+    tree.userData.variant = variant;
+    tree.userData.subVariant = subVariant;
+}
+
+export function setShader(tree, shader) {
+    tree.material = shader;
+}
+
+export function disposeInstances() {
+    for (let i = 0; i < solid_instances.length; i++) {
+        dispose(solid_instances[i], true);
+    }
+    solid_instances.length = 0;
+}
+
+function dispose(node, recursive = false) {
+    if (!node) {
+        return;
+    }
+
+    if (recursive && node.children) {
+        for (const child of node.children) {
+            dispose(child, recursive);
+        }
+    }
+
+    if (node.geometry) {
+        node.geometry.dispose();
+    }
+
+    if (!node.material) {
+        return;
+    }
+
+    const materials = node.material.length === undefined ? [node.material] : node.material
+
+    for (const material of materials) {
+        for (const key in material) {
+            const value = material[key];
+
+            if (value && typeof value === 'object' && 'minFilter' in value) {
+                value.dispose();
+            }
+        }
+
+        material && material.dispose();
+    }
 }
