@@ -1,4 +1,5 @@
 ﻿using GBX.NET;
+using MapViewerEngine.Modules;
 using System;
 using System.IO.Compression;
 using System.Numerics;
@@ -32,7 +33,7 @@ internal static partial class Solid
     internal static partial void SetTreeRot(JSObject tree, double xx, double xy, double xz, double yx, double yy, double yz, double zx, double zy, double zz);
 
     [JSImport("create_visual", nameof(Solid))]
-    internal static partial JSObject CreateVisual([JSMarshalAs<JSType.MemoryView>] Span<byte> vertices, [JSMarshalAs<JSType.MemoryView>] Span<int> indices, [JSMarshalAs<JSType.MemoryView>] Span<byte> uvs, int expectedBlockCount);
+    internal static partial JSObject CreateVisual([JSMarshalAs<JSType.MemoryView>] Span<byte> vertices, [JSMarshalAs<JSType.MemoryView>] Span<int> indices, [JSMarshalAs<JSType.MemoryView>] Span<byte> uvs, int expectedMeshCount);
 
     [JSImport("create_lod", nameof(Solid))]
     internal static partial JSObject CreateLod();
@@ -49,10 +50,10 @@ internal static partial class Solid
     [JSImport("addUserData", nameof(Solid))]
     internal static partial void AddUserData(JSObject tree, string name, bool isGround, int variant, int subVariant);
 
-    [JSImport("setShader", nameof(Solid))]
-    internal static partial void SetShader(JSObject tree, JSObject shader);
+    [JSImport("updateInstanceCount", nameof(Solid))]
+    internal static partial void UpdateInstanceCount(JSObject tree, int count);
 
-    public static async Task<JSObject> ParseAsync(byte[] data, int expectedBlockCount)
+    public static async Task<JSObject> ParseAsync(byte[] data, int expectedMeshCount)
     {
         using var stream = new MemoryStream(data);
         using var deflate = new DeflateStream(stream, CompressionMode.Decompress);
@@ -70,17 +71,17 @@ internal static partial class Solid
         var hasFileWriteTime = reader.ReadBoolean();
         var fileWriteTime = hasFileWriteTime ? reader.ReadInt64() : 0;
 
-        return WrapTree(await ReadTreeAsync(reader, expectedBlockCount));
+        return WrapTree(await ReadTreeAsync(reader, expectedMeshCount));
     }
 
-    private static async Task<JSObject> ReadTreeAsync(BinaryReader reader, int expectedBlockCount)
+    private static async Task<JSObject> ReadTreeAsync(BinaryReader reader, int expectedMeshCount)
     {
         var tree = CreateTree();
 
         var childrenCount = reader.Read7BitEncodedInt();
         for (int i = 0; i < childrenCount; i++)
         {
-            AddToTree(tree, await ReadTreeAsync(reader, expectedBlockCount));
+            AddToTree(tree, await ReadTreeAsync(reader, expectedMeshCount));
         }
 
         if (reader.ReadBoolean())
@@ -95,7 +96,7 @@ internal static partial class Solid
             SetTreePos(tree, pos.X, pos.Y, pos.Z);
         }        
         
-        var visual = ReadVisual(reader, expectedBlockCount);
+        var visual = ReadVisual(reader, expectedMeshCount);
 
         if (visual is not null)
         {
@@ -115,7 +116,7 @@ internal static partial class Solid
                 var distance = storedDistance;
                 storedDistance = reader.ReadSingle() * 2;
 
-                AddLod(lod, await ReadTreeAsync(reader, expectedBlockCount), distance);
+                AddLod(lod, await ReadTreeAsync(reader, expectedMeshCount), distance);
 
                 await Task.Delay(10);
             }
@@ -132,23 +133,24 @@ internal static partial class Solid
 
         if (shaderName is not null)
         {
-            if (MapViewerEngineTool.CachedShaders.TryGetValue(shaderName, out var shader))
+            if (!MapViewerEngineTool.CachedShaders.TryGetValue(shaderName, out var shader))
             {
-                if (shader is not null)
-                {
-                    SetShader(tree, shader);
-                }
-            }
-            else
-            {
+                shader = Shader.Create(shaderName);
+                
+                MapViewerEngineTool.CachedShaders.Add(shaderName, shader);
                 MapViewerEngineTool.RequestedShaders.TryAdd(shaderName, false);
+            }
+
+            if (visual is not null)
+            {
+                Shader.Set(visual, shader);
             }
         }
 
         return tree;
     }
 
-    private static JSObject? ReadVisual(BinaryReader reader, int expectedBlockCount)
+    private static JSObject? ReadVisual(BinaryReader reader, int expectedMeshCount)
     {
         var hasVisual = reader.ReadBoolean();
         
@@ -173,7 +175,7 @@ internal static partial class Solid
             indices[i] = reader.Read7BitEncodedInt();
         }
 
-        return CreateVisual(vertices, indices, uvs, expectedBlockCount);
+        return CreateVisual(vertices, indices, uvs, expectedMeshCount);
     }
 
     private static Mat3 ReadMatrix3(BinaryReader reader)

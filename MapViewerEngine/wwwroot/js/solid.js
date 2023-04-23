@@ -1,6 +1,6 @@
 const solid_instances = [];
 
-const material = new THREE.MeshStandardMaterial({ color: 0xCCCCCC });
+const stockMaterial = new THREE.MeshStandardMaterial({ color: 0xAD9000 });
 
 export function create_tree() {
     return new THREE.Object3D();
@@ -36,7 +36,7 @@ export function add_lod(lod_tree, level_tree, distance) {
     lod_tree.addLevel(level_tree, distance);
 }
 
-export function create_visual(vertData, indData, uvData, expected_block_count) {
+export function create_visual(vertData, indData, uvData, expectedMeshCount) {
 
     var verts = new Float32Array(vertData.length / 4);
     var vertDataView = new DataView(vertData.slice().buffer);
@@ -59,16 +59,22 @@ export function create_visual(vertData, indData, uvData, expected_block_count) {
         var offset = i * uvBufferCount;
         var uvDataView = new DataView(uvData.slice(offset, offset + uvBufferCount).buffer);
         var uvs = new Float32Array(uvBufferCount / 4);
-        for (var i = 0; i < uvBufferCount; i += 4) {
-            uvs[i / 4] = uvDataView.getFloat32(i, true);
+        for (var j = 0; j < uvBufferCount; j += 4) {
+            uvs[j / 4] = uvDataView.getFloat32(j, true);
         }
 
-        geometry.setAttribute('uv' + (i + 1), new THREE.Float32BufferAttribute(uvs, 2));
+        if (i == 0) {
+            geometry.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
+        }
     }
 
     geometry.computeVertexNormals();
 
-    const mesh = new THREE.InstancedMesh(geometry, material, expected_block_count);
+    if (uvSetCount > 0) {
+        geometry.computeTangents();
+    }
+
+    const mesh = new THREE.InstancedMesh(geometry, stockMaterial, expectedMeshCount);
     mesh.receiveShadow = true;
     mesh.castShadow = true;
 
@@ -86,6 +92,8 @@ export function instantiate(tree, placements, bSizeX, bSizeZ, ebSizeX, ebSizeY, 
     if (!tree.isInstancedMesh) {
         return;
     }
+
+    var normalizedMatrix = new THREE.Matrix4().copy(tree.matrixWorld).invert().multiply(tree.matrix);
     
     for (let i = 0; i < placements.length; i++) {
         var blockPlacement = placements[i];
@@ -95,10 +103,6 @@ export function instantiate(tree, placements, bSizeX, bSizeZ, ebSizeX, ebSizeY, 
         var z = (blockPlacement >> 8) & 0xFF;
         var direction = blockPlacement & 0x0F;
 
-        var worldMatrix = new THREE.Matrix4().copy(tree.matrixWorld);
-
-        var normalizedMatrix = new THREE.Matrix4().copy(worldMatrix).invert().multiply(tree.matrix);
-
         var placementMatrix = getBlockPlacementMatrix(
             x * ebSizeX,
             y * ebSizeY,
@@ -107,7 +111,7 @@ export function instantiate(tree, placements, bSizeX, bSizeZ, ebSizeX, ebSizeY, 
             bSizeX * ebSizeX,
             bSizeZ * ebSizeZ);
 
-        var preFinalMatrix = normalizedMatrix.multiply(placementMatrix).multiply(worldMatrix);
+        var preFinalMatrix = new THREE.Matrix4().copy(normalizedMatrix).multiply(placementMatrix).multiply(tree.matrixWorld);
 
         tree.setMatrixAt(i, preFinalMatrix);
     }
@@ -124,13 +128,13 @@ function getBlockPlacementMatrix(x, y, z, dir, bSizeX, bSizeZ) {
         matrix.setPosition(x, y, z);
     }
     else if (dir === 1) {
-        matrix.setPosition(x + bSizeX, y, z);
+        matrix.setPosition(x + bSizeZ, y, z);
     }
     else if (dir === 2) {
-        matrix.setPosition(x+bSizeX, y, z+bSizeZ);
+        matrix.setPosition(x + bSizeX, y, z + bSizeZ);
     }
     else if (dir === 3) {
-        matrix.setPosition(x, y, z + bSizeZ);
+        matrix.setPosition(x, y, z + bSizeX);
     }
 
     return matrix;
@@ -151,8 +155,29 @@ export function addUserData(tree, name, isGround, variant, subVariant) {
     tree.userData.subVariant = subVariant;
 }
 
-export function setShader(tree, shader) {
-    tree.material = shader;
+export function updateInstanceCount(tree, count) {
+    for (let i = 0; i < tree.children.length; i++) {
+        updateInstanceCount(tree.children[i], count);
+    }
+
+    if (!tree.isInstancedMesh) {
+        return;
+    }
+
+    if (count > tree.count) {
+        const newInstancedMesh = new THREE.InstancedMesh(tree.geometry, tree.material, count);
+        newInstancedMesh.receiveShadow = true;
+        newInstancedMesh.castShadow = true;
+        newInstancedMesh.children = tree.children;
+
+        tree.parent.add(newInstancedMesh);
+
+        // dispose the old InstancedMesh
+        tree.dispose();
+    }
+    else {
+        tree.count = count;
+    }
 }
 
 export function disposeInstances() {

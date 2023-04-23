@@ -11,7 +11,7 @@ export function getCam() {
 }
 
 export function create(distance) {
-    cam = new THREE.PerspectiveCamera(90, (window.innerWidth - 10) / (window.innerHeight - 80), 0.1, 1000);
+    cam = new THREE.PerspectiveCamera(90, (window.innerWidth - 10) / (window.innerHeight - 80), 0.1, 10000);
     cam.position.z = -distance;
 
     cam_target = new THREE.Vector3(0, 0, 0);

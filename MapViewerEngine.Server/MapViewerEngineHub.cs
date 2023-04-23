@@ -146,4 +146,28 @@ public class MapViewerEngineHub : Hub, IMapViewerEngineHub
 
         await Clients.Caller.SendAsync("Shader", shaderName, data);
     }
+
+    public async Task<byte[]> Scene(string collection, int sizeX, int sizeZ)
+    {
+        _ = collection ?? throw new ArgumentNullException(nameof(collection));
+
+        var cacheKey = $"Scene:{collection}:{sizeX}:{sizeZ}";
+
+        if (cache.TryGetValue(cacheKey, out byte[]? data) && data is not null)
+        {
+            return data;
+        }
+
+        data = await unitOfWork.OfficialScenes.GetMeshDataByMapSizeAsync(collection, sizeX, sizeZ);
+
+        if (data is null)
+        {
+            // Shouldn't happen or subject to more intense rate limiting
+            throw new Exception($"Shouldn't happen or subject to more intense rate limiting ({collection}, {sizeX}, {sizeZ})");
+        }
+
+        cache.Set(cacheKey, data, TimeSpan.FromHours(1));
+
+        return data;
+    }
 }

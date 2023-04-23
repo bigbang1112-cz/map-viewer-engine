@@ -26,6 +26,14 @@
         <div>@Textures</div>
     </div>
 
+    @if (tool?.Map is not null)
+    {
+        <div class="map-name">
+            <FormattedText Text="@tool.Map.MapName" />
+            <div class="map-author">by <FormattedText Text="@(tool.Map.AuthorNickname ?? tool.Map.AuthorLogin)" /></div>
+        </div>
+    }
+
     @if (Exc is not null)
     {
         <div style="position: absolute;">@Exc</div>
@@ -76,6 +84,7 @@
         await JSHost.ImportAsync(nameof(Renderer), "../_content/MapViewerEngine/js/renderer.js");
         await JSHost.ImportAsync(nameof(Cam), "../_content/MapViewerEngine/js/cam.js");
         await JSHost.ImportAsync(nameof(Solid), "../_content/MapViewerEngine/js/solid.js");
+        await JSHost.ImportAsync(nameof(Shader), "../_content/MapViewerEngine/js/shader.js");
 
         renderer = Renderer.Create();
         Renderer.CreateScene();
@@ -161,7 +170,11 @@
 
             MapViewerEngineTool.CachedSolids.Add(block, obj);
 
-            if (MapViewerEngineTool.CachedMetas.TryGetValue(block.Name, out var meta))
+            if (block == Tool.ZoneVariant)
+            {
+                Tool.InstantiateDefaultZoneSolids(obj);
+            }
+            else if (MapViewerEngineTool.CachedMetas.TryGetValue(block.Name, out var meta))
             {
                 Tool.InstantiateSolids(obj, block, meta);
             }
@@ -196,7 +209,14 @@
 
     private async Task SaveShader(string shaderName, byte[] data)
     {
-        
+        MapViewerEngineTool.RequestedShaders.Remove(shaderName);
+
+        if (!MapViewerEngineTool.CachedShaders.TryGetValue(shaderName, out var shader))
+        {
+            return;
+        }
+
+        Shader.Update(shader, data);
     }
 
     private async Task SaveMetas(OfficialBlockMeta[] metas)

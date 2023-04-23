@@ -1,6 +1,4 @@
-﻿using MapViewerEngine.Shared;
-using System.Runtime.InteropServices.JavaScript;
-using System.Runtime.Versioning;
+﻿using System.Runtime.InteropServices.JavaScript;
 
 namespace MapViewerEngine.Modules;
 

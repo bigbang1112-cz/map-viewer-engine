@@ -12,6 +12,7 @@ public class MapViewerEngineContext : DbContext
     public DbSet<OfficialBlockMesh> OfficialBlockMeshes { get; set; }
     public DbSet<OfficialItemMesh> OfficialItemMeshes { get; set; }
     public DbSet<OfficialShader> OfficialShaders { get; internal set; }
+    public DbSet<OfficialScene> OfficialScenes { get; internal set; }
 
     public MapViewerEngineContext(DbContextOptions<MapViewerEngineContext> options) : base(options)
     {

@@ -10,6 +10,7 @@ public delegate Task MeshHandler(Guid guid, byte[] data);
 public delegate Task MetaHandler(string blockName, string collection, byte[] data);
 public delegate Task MetasHandler(OfficialBlockMeta[] metas);
 public delegate Task ShaderHandler(string shaderName, byte[] data);
+public delegate Task SceneHandler(string shaderName, byte[] data);
 
 public partial class MapViewerEngineHubConnection : ToolHubConnection
 {
@@ -96,5 +97,10 @@ public partial class MapViewerEngineHubConnection : ToolHubConnection
     public async Task SendShaderAsync(string shader, CancellationToken cancellationToken = default)
     {
         await Connection.SendAsync("Shader", shader, cancellationToken);
+    }
+
+    public async Task<byte[]> InvokeSceneAsync(string collection, int sizeX, int sizeZ, CancellationToken cancellationToken = default)
+    {
+        return await Connection.InvokeAsync<byte[]>("Scene", collection, sizeX, sizeZ, cancellationToken);
     }
 }
