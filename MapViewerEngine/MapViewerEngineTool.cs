@@ -4,7 +4,6 @@ using GbxToolAPI;
 using GbxToolAPI.Client;
 using MapViewerEngine.Modules;
 using MapViewerEngine.Shared;
-using System.Linq;
 using System.Runtime.InteropServices.JavaScript;
 using System.Runtime.Versioning;
 
@@ -12,6 +11,8 @@ namespace MapViewerEngine;
 
 [ToolName("Map Viewer Engine")]
 [ToolDescription("View maps in a web browser.")]
+[ToolGitHub("bigbang1112-cz/map-viewer-engine", NoExe = true)]
+[ToolSingleSelection]
 [SupportedOSPlatform("browser")]
 public class MapViewerEngineTool : ITool, IHasUI, IHubConnection<MapViewerEngineHubConnection>
 {
