@@ -88,7 +88,7 @@
 
         renderer = Renderer.Create();
         Renderer.CreateScene();
-        var cam = Cam.Create(distance: 64);
+        var cam = Cam.Create(distance: 256);
 
         Renderer.SpawnSampleObjects();
 
@@ -99,12 +99,7 @@
             return;
         }
 
-        Cam.Move(Tool.AbsoluteTrueMapCenter.X, Tool.AbsoluteTrueMapCenter.Y, Tool.AbsoluteTrueMapCenter.Z);
-
-        await HubConnection.StartAsync();
-        HubConnection.BlockMesh += SaveBlockMesh;
-        HubConnection.Metas += SaveMetas;
-        HubConnection.Shader += SaveShader;
+        Cam.Move(Tool.AbsoluteTrueMapCenter.X, 48, Tool.AbsoluteTrueMapCenter.Z);
 
         await Tool.LoadAsync();
     }
@@ -149,103 +144,14 @@
     {
         if (tool is not null)
         {
-            tool.HubConnection.BlockMesh -= SaveBlockMesh;
-            tool.HubConnection.Metas -= SaveMetas;
-            tool.HubConnection.Shader -= SaveShader;
+            tool.Dispose();
         }
 
+        await HubConnection.StopAsync();
+        
         timer?.Dispose();
         Renderer.Dispose();
 
         await base.DisposeAsync(disposing);
-    }
-
-    private async Task SaveBlockMesh(BlockVariant block, byte[] data)
-    {
-        try
-        {
-            var obj = await Solid.ParseAsync(data, Tool.BlockCountPerModel[block]);
-
-            Solid.AddUserData(obj, block.Name, block.Ground, block.Variant, block.SubVariant);
-
-            MapViewerEngineTool.CachedSolids.Add(block, obj);
-
-            if (block == Tool.ZoneVariant)
-            {
-                Tool.InstantiateDefaultZoneSolids(obj);
-            }
-            else if (MapViewerEngineTool.CachedMetas.TryGetValue(block.Name, out var meta))
-            {
-                Tool.InstantiateSolids(obj, block, meta);
-            }
-            else if (MapViewerEngineTool.SolidsToInstantiateLater.TryGetValue(block.Name, out var list))
-            {
-                list.Add((block, obj));
-            }
-            else
-            {
-                MapViewerEngineTool.SolidsToInstantiateLater.Add(block.Name, new List<(BlockVariant, JSObject)> { (block, obj) });
-            }
-
-            Renderer.AddToScene(obj);
-
-            foreach (var requested in MapViewerEngineTool.RequestedShaders)
-            {
-                if (!requested.Value)
-                {
-                    await HubConnection.SendShaderAsync(requested.Key);
-                    MapViewerEngineTool.RequestedShaders[requested.Key] = true;
-                }
-            }
-
-            await Task.Delay(10);
-        }
-        catch (Exception ex)
-        {
-            Exc = ex.ToString();
-            StateHasChanged();
-        }
-    }
-
-    private async Task SaveShader(string shaderName, byte[] data)
-    {
-        MapViewerEngineTool.RequestedShaders.Remove(shaderName);
-
-        if (!MapViewerEngineTool.CachedShaders.TryGetValue(shaderName, out var shader))
-        {
-            return;
-        }
-
-        Shader.Update(shader, data);
-    }
-
-    private async Task SaveMetas(OfficialBlockMeta[] metas)
-    {
-        foreach (var meta in metas)
-        {
-            Meta m;
-
-            try
-            {
-                m = Meta.Parse(meta.Meta);
-                MapViewerEngineTool.CachedMetas[meta.Name] = m;
-            }
-            catch (Exception ex)
-            {
-                Exc = ex.ToString();
-                StateHasChanged();
-                continue;
-            }
-
-            if (MapViewerEngineTool.SolidsToInstantiateLater.TryGetValue(meta.Name, out var list))
-            {
-                foreach (var (block, obj) in list)
-                {
-                    Tool.InstantiateSolids(obj, block, m);
-                }
-
-                MapViewerEngineTool.SolidsToInstantiateLater.Remove(meta.Name);
-            }
-        }
     }
 }

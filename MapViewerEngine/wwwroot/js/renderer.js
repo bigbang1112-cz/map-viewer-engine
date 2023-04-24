@@ -15,13 +15,20 @@ export function create() {
     canvas.parentNode.replaceChild(renderer.domElement, canvas);
 
     window.addEventListener('resize', onWindowResize, false);
-    renderer.domElement.addEventListener('wheel', onMouseWheel);// Add a click event listener to the renderer element
+    renderer.domElement.addEventListener('wheel', onMouseWheel);
     renderer.domElement.addEventListener('click', onMeshClick);
+    renderer.domElement.addEventListener('contextmenu', onContextMenu);
+    renderer.domElement.addEventListener('mousedown', onMouseDown);
+    renderer.domElement.addEventListener('mouseup', onMouseUp);
+    renderer.domElement.addEventListener('mousemove', onMouseMove);
+    renderer.domElement.addEventListener("selectstart", function (event) {
+        event.preventDefault();
+    });
 
     return renderer;
 }
 
-async function onMeshClick(event) {
+async function onMeshClick(event) {    
     // Get the mouse coordinates relative to the renderer element
     const mouse = new THREE.Vector2();
     mouse.x = (event.clientX / renderer.domElement.clientWidth) * 2 - 1;
@@ -69,11 +76,29 @@ function onMouseWheel(event) {
     cam.onMouseWheel(event);
 }
 
+function onMouseDown(event) {
+    //renderer.domElement.requestPointerLock();
+    cam.onMouseDown(event);
+}
+
+function onMouseUp(event) {
+    //document.exitPointerLock();
+    cam.onMouseUp(event);
+}
+
+function onMouseMove(event) {
+    cam.onMouseMove(event);
+}
+
 function onWindowResize() {
     // Update camera aspect ratio and renderer size
     cam.getCam().aspect = window.innerWidth / window.innerHeight;
     cam.getCam().updateProjectionMatrix();
     renderer.setSize(window.innerWidth - 10, window.innerHeight - 80);
+}
+
+function onContextMenu(event) {
+    event.preventDefault();
 }
 
 export function spawnSampleObjects() {
@@ -127,6 +152,10 @@ export function dispose() {
 
     window.removeEventListener('resize', onWindowResize);
     renderer.domElement.removeEventListener('wheel', onMouseWheel);
+    renderer.domElement.removeEventListener('click', onMeshClick);
+    renderer.domElement.removeEventListener('contextmenu', onContextMenu);
+    renderer.domElement.removeEventListener('mousedown', onMouseDown);
+    renderer.domElement.removeEventListener('mouseup', onMouseUp);
     
     disposeInstances();
 

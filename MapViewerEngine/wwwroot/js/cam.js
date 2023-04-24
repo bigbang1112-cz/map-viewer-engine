@@ -11,16 +11,15 @@ export function getCam() {
 }
 
 export function create(distance) {
-    cam = new THREE.PerspectiveCamera(90, (window.innerWidth - 10) / (window.innerHeight - 80), 0.1, 10000);
+    cam = new THREE.PerspectiveCamera(85, (window.innerWidth - 10) / (window.innerHeight - 80), 0.1, 10000);
     cam.position.z = -distance;
 
     cam_target = new THREE.Vector3(0, 0, 0);
     cam_spherical = new THREE.Spherical().setFromVector3(cam.position.clone().sub(cam_target));
+    cam_spherical.phi = 1;
     
     document.addEventListener('keydown', onKeyDown);
     document.addEventListener('keyup', onKeyUp);
-    document.addEventListener('mousedown', onMouseDown);
-    document.addEventListener('mousemove', onMouseMove);
 
     return cam;
 }
@@ -41,8 +40,6 @@ export function move(x, y, z) {
 export function dispose() {
     document.removeEventListener('keydown', onKeyDown);
     document.removeEventListener('keyup', onKeyUp);
-    document.removeEventListener('mousedown', onMouseDown);
-    document.removeEventListener('mousemove', onMouseMove);
 }
 
 function onKeyDown(event) {
@@ -71,20 +68,50 @@ function onKeyUp(event) {
     }
 }
 
-function onMouseDown(event) {
+let mouseDown = false;
+
+export function onMouseDown(event) {
+    mouseDown = true;
     if (event.code == "ShiftLeft" && event.button === 0) {
         isShiftKeyDown = true;
     }
 }
 
-function onMouseMove(event) {
-    if (event.buttons === 1) {
-        if (isShiftKeyDown) {
-            const vector = new THREE.Vector3(-event.movementX * moveSpeed * cam_spherical.radius, event.movementY * moveSpeed * cam_spherical.radius, 0);
-            vector.applyQuaternion(cam.quaternion);
-            cam_target.add(vector);
+export function onMouseUp(event) {
+    mouseDown = false;
+    if (event.code == "ShiftLeft" && event.button === 0) {
+        isShiftKeyDown = true;
+    }
+}
+
+export function onMouseMove(event) {
+    if (mouseDown) {
+        if (event.buttons === 1) {
+            if (isShiftKeyDown) {
+                const vector = new THREE.Vector3(-event.movementX * moveSpeed * cam_spherical.radius, event.movementY * moveSpeed * cam_spherical.radius, 0);
+                vector.applyQuaternion(cam.quaternion);
+                cam_target.add(vector);
+            }
+            else {
+                const vector = new THREE.Vector3(-event.movementX * moveSpeed * cam_spherical.radius, 0, -event.movementY * moveSpeed * cam_spherical.radius);
+
+                const quaternion = new THREE.Quaternion();
+                cam.getWorldQuaternion(quaternion);
+
+                // Separate the Y component of the vector
+                const y = vector.y;
+                vector.setY(0);
+
+                // Transform the X and Z components of the vector into the camera's local coordinate system
+                vector.applyQuaternion(quaternion);
+
+                // Combine the transformed X and Z components with the original Y component
+                vector.setY(y);
+
+                cam_target.add(vector);
+            }
         }
-        else {
+        else if (event.buttons === 2) {
             cam_spherical.theta -= event.movementX * rotateSpeed;
             cam_spherical.phi -= event.movementY * rotateSpeed;
         }

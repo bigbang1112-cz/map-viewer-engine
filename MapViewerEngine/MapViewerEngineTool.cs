@@ -14,7 +14,7 @@ namespace MapViewerEngine;
 [ToolGitHub("bigbang1112-cz/map-viewer-engine", NoExe = true)]
 [ToolSingleSelection]
 [SupportedOSPlatform("browser")]
-public class MapViewerEngineTool : ITool, IHasUI, IHubConnection<MapViewerEngineHubConnection>
+public class MapViewerEngineTool : ITool, IHasUI, IHubConnection<MapViewerEngineHubConnection>, IDisposable
 {
     public CGameCtnChallenge Map { get; }
     public Int3 MapSize { get; }
@@ -98,6 +98,12 @@ public class MapViewerEngineTool : ITool, IHasUI, IHubConnection<MapViewerEngine
 
     public async Task LoadAsync(CancellationToken cancellationToken = default)
     {
+        await HubConnection.StartAsync(cancellationToken);
+        
+        HubConnection.BlockMesh += SaveBlockMesh;
+        HubConnection.Metas += SaveMetas;
+        HubConnection.Shader += SaveShader;
+
         var uniqueBlockNames = Map.GetBlocks()
             .Select(x => x.Name)
             .Distinct()
@@ -166,6 +172,79 @@ public class MapViewerEngineTool : ITool, IHasUI, IHubConnection<MapViewerEngine
         }
     }
 
+
+    private async Task SaveBlockMesh(BlockVariant block, byte[] data)
+    {
+        var obj = await Solid.ParseAsync(data, BlockCountPerModel[block]);
+
+        Solid.AddUserData(obj, block.Name, block.Ground, block.Variant, block.SubVariant);
+
+        CachedSolids.Add(block, obj);
+
+        if (block == ZoneVariant)
+        {
+            InstantiateDefaultZoneSolids(obj);
+        }
+        else if (CachedMetas.TryGetValue(block.Name, out var meta))
+        {
+            InstantiateSolids(obj, block, meta);
+        }
+        else if (SolidsToInstantiateLater.TryGetValue(block.Name, out var list))
+        {
+            list.Add((block, obj));
+        }
+        else
+        {
+            SolidsToInstantiateLater.Add(block.Name, new List<(BlockVariant, JSObject)> { (block, obj) });
+        }
+
+        Renderer.AddToScene(obj);
+
+        foreach (var requested in RequestedShaders)
+        {
+            if (!requested.Value)
+            {
+                await HubConnection.SendShaderAsync(requested.Key);
+                RequestedShaders[requested.Key] = true;
+            }
+        }
+
+        await Task.Delay(10);
+    }
+
+    private async Task SaveShader(string shaderName, byte[] data)
+    {
+        RequestedShaders.Remove(shaderName);
+
+        if (!CachedShaders.TryGetValue(shaderName, out var shader))
+        {
+            return;
+        }
+
+        Shader.Update(shader, data);
+    }
+
+    private async Task SaveMetas(OfficialBlockMeta[] metas)
+    {
+        foreach (var meta in metas)
+        {
+            Meta m;
+            
+            m = Meta.Parse(meta.Meta);
+            CachedMetas[meta.Name] = m;
+
+            if (SolidsToInstantiateLater.TryGetValue(meta.Name, out var list))
+            {
+                foreach (var (block, obj) in list)
+                {
+                    InstantiateSolids(obj, block, m);
+                }
+
+                SolidsToInstantiateLater.Remove(meta.Name);
+            }
+        }
+    }
+
     private BlockVariant? GetEnvironmentZoneVariant()
     {
         var blockName = Map.Collection.ToString() switch
@@ -228,7 +307,6 @@ public class MapViewerEngineTool : ITool, IHasUI, IHubConnection<MapViewerEngine
 
             Solid.SetTreePos(sceneObj, 0, sceneYOffset, 0);
         }
-        
         
         Renderer.AddToScene(sceneObj);
     }
@@ -311,5 +389,12 @@ public class MapViewerEngineTool : ITool, IHasUI, IHubConnection<MapViewerEngine
         }
 
         return blockPlacements.ToArray();
+    }
+
+    public void Dispose()
+    {
+        HubConnection.BlockMesh -= SaveBlockMesh;
+        HubConnection.Metas -= SaveMetas;
+        HubConnection.Shader -= SaveShader;
     }
 }
