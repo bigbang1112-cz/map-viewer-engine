@@ -4,7 +4,6 @@ using MapViewerEngine.Server.Repos;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
-using System.Threading;
 
 namespace MapViewerEngine.Server.Endpoints.V1;
 
@@ -14,7 +13,7 @@ public class CollectionsEndpoint : IToolEndpoint
     {
         app.MapGet("collections", GetAllCollections);
         app.MapGet("collections/{id}", GetCollection);
-        app.MapPost("collections/add", AddCollection);
+        app.MapPost("collections/add", AddCollection).RequireAuthorization();
     }
 
     private async Task<IResult> GetAllCollections(ICollectionRepo repo, CancellationToken cancellationToken)
