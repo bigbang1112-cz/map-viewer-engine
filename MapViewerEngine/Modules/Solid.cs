@@ -116,9 +116,14 @@ internal static partial class Solid
                 var distance = storedDistance;
                 storedDistance = reader.ReadSingle() * 2;
 
-                AddLod(lod, await ReadTreeAsync(reader, expectedMeshCount), distance);
+                var lodTree = await ReadTreeAsync(reader, expectedMeshCount);
 
-                await Task.Delay(10);
+                if (i == 0)
+                {
+                    AddLod(lod, lodTree, distance);
+                    await Task.Delay(10);
+                }
+
             }
 
             AddToTree(tree, lod);
@@ -136,7 +141,7 @@ internal static partial class Solid
             if (!MapViewerEngineTool.CachedShaders.TryGetValue(shaderName, out var shader))
             {
                 shader = Shader.Create(shaderName);
-                
+
                 MapViewerEngineTool.CachedShaders.Add(shaderName, shader);
                 MapViewerEngineTool.RequestedShaders.TryAdd(shaderName, false);
             }

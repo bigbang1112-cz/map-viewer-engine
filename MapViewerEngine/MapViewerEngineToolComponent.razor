@@ -80,7 +80,7 @@
             return;
         }
 
-        await JSHost.ImportAsync("ThreeJS", "https://unpkg.com/three@0.149.0/build/three.min.js");
+        await JSHost.ImportAsync("three", "https://unpkg.com/three@0.149.0/build/three.min.js");
         await JSHost.ImportAsync(nameof(Renderer), "../_content/MapViewerEngine/js/renderer.js");
         await JSHost.ImportAsync(nameof(Cam), "../_content/MapViewerEngine/js/cam.js");
         await JSHost.ImportAsync(nameof(Solid), "../_content/MapViewerEngine/js/solid.js");

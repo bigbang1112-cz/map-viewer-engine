@@ -1,5 +1,7 @@
 ﻿using System.IO.Compression;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices.JavaScript;
+using System.Xml.Linq;
 
 namespace MapViewerEngine.Modules;
 
@@ -20,6 +22,9 @@ internal static partial class Shader
 
     [JSImport("create", nameof(Shader))]
     public static partial JSObject? Create(string name);
+
+    [JSImport("animate", nameof(Shader))]
+    public static partial void Animate();
 
     public static void Update(JSObject existingMaterial, byte[] data)
     {
@@ -72,5 +77,23 @@ internal static partial class Shader
         }
 
         return SetTexture(existingMaterial, texture, textureName);
+    }
+
+    private static readonly HashSet<string> waterMaterials = new()
+    {
+        "SpeedWater",
+        "BaySea",
+        "BayWarpSea",
+        "CoastSea",
+        "CoastWarpSea",
+        "CoastFoam",
+        "RallyWater",
+        "RallyWarpLake",
+        "StadiumWater"
+    };
+
+    internal static bool IsWater(string shaderName)
+    {
+        return waterMaterials.Contains(shaderName);
     }
 }

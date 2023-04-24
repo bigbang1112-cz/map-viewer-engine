@@ -36,10 +36,13 @@ function createBlendShader(texture1, texture2, blendMap) {
     });
 }
 
+var waterMaterial = new THREE.MeshStandardMaterial({
+    color: 0x52889E,
+    transparent: true,
+    opacity: 0.5
+});
+
 export function create(name) {
-    let color = 0xBBBBBB;
-    let transparent = false;
-    let opacity = 1;
 
     if (name == "SpeedWater"
         || name == "BaySea"
@@ -50,12 +53,24 @@ export function create(name) {
         || name == "RallyWater"
         || name == "RallyWarpLake"
         || name == "StadiumWater") {
-        color = 0x52889E;
-        transparent = true;
-        opacity = 0.5;
+        return waterMaterial;
     }
 
-    var material = new THREE.MeshStandardMaterial({ color: color, opacity: opacity, transparent: transparent });
+    let color = 0xBBBBBB;
+    let opacity = 1;
+    let transparent = false;
+
+    if (name == "StadiumGrassFence") {
+        color = 0x3D5831;
+        opacity = 0;
+        transparent = true;
+    }
+
+    var material = new THREE.MeshStandardMaterial({
+        color: color,
+        opacity: opacity,
+        transparent: transparent
+    });
     material.name = name;
     return material;
 }
@@ -87,4 +102,8 @@ export function setTexture(shader, texture, name) {
     }
 
     return false;
+}
+
+export function animate() {
+    
 }

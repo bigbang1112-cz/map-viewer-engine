@@ -1,5 +1,6 @@
 import * as cam from './cam.js';
 import { disposeInstances } from './solid.js';
+import * as shader from './shader.js';
 
 let renderer;
 let animationRequestId;
@@ -9,6 +10,7 @@ export function create() {
     renderer = new THREE.WebGLRenderer();
     renderer.antialias = true;
     renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     renderer.setSize(window.innerWidth - 10, window.innerHeight - 80);
 
     const canvas = document.querySelector('canvas');
@@ -55,6 +57,9 @@ async function onMeshClick(event) {
 
 export function createScene() {
     scene = new THREE.Scene();
+    scene.background = new THREE.CubeTextureLoader()
+        .setPath('_content/MapViewerEngine/textures/skybox/')
+        .load(['right.webp', 'left.webp', 'top.webp', 'bottom.webp', 'front.webp', 'back.webp']);
     return scene;
 }
 
@@ -68,6 +73,7 @@ export function animate() {
     cam.animate();
 
     //stats.begin();
+    shader.animate();
     renderer.render(scene, cam.getCam());
     //stats.end();
 }
@@ -121,7 +127,7 @@ export function spawnSampleObjects() {
     scene.add(planeMesh);
 
     // Create an ambient light
-    var ambientLight = new THREE.AmbientLight(0x404040);
+    var ambientLight = new THREE.AmbientLight(0x7F7F7F);
 
     // Add the light to the scene
     scene.add(ambientLight);
@@ -130,18 +136,22 @@ export function spawnSampleObjects() {
     let directionalLight = new THREE.DirectionalLight(0xffffff, 1);
 
     // Set the position and direction of the light
-    directionalLight.position.set(100, 100, 100);
+    directionalLight.position.set(0, 256, 0);
+    directionalLight.target.position.set(-2048, 0, -2048);
 
     // Set up shadow properties for the light
     directionalLight.castShadow = true;
-    directionalLight.shadow.mapSize.width = 2048;
-    directionalLight.shadow.mapSize.height = 2048;
+    directionalLight.shadow.mapSize.width = 4096;
+    directionalLight.shadow.mapSize.height = 4096;
+    directionalLight.shadow.camera.left = -5000;
+    directionalLight.shadow.camera.right = 5000;
+    directionalLight.shadow.camera.top = 5000;
+    directionalLight.shadow.camera.bottom = -5000;
     directionalLight.shadow.camera.near = 0.1;
-    directionalLight.shadow.camera.far = 500;
-    directionalLight.shadow.camera.left = -50;
-    directionalLight.shadow.camera.right = 50;
-    directionalLight.shadow.camera.top = 50;
-    directionalLight.shadow.camera.bottom = -50;
+    directionalLight.shadow.camera.far = 1000;
+
+    directionalLight.shadow.camera.up.set(0, 0, 1);
+    directionalLight.shadow.camera.lookAt(0, 0, 0);
 
     // Add the light to the scene
     scene.add(directionalLight);

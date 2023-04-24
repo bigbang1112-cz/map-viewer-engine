@@ -393,6 +393,8 @@ public class MapViewerEngineTool : ITool, IHasUI, IHubConnection<MapViewerEngine
 
     public void Dispose()
     {
+        RequestedShaders.Clear();
+        
         HubConnection.BlockMesh -= SaveBlockMesh;
         HubConnection.Metas -= SaveMetas;
         HubConnection.Shader -= SaveShader;
