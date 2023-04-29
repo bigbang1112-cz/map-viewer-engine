@@ -3,6 +3,7 @@ using System;
 using MapViewerEngine.Server;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -10,9 +11,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace MapViewerEngine.Server.Migrations
 {
     [DbContext(typeof(MapViewerEngineContext))]
-    partial class MapViewerEngineContextModelSnapshot : ModelSnapshot
+    [Migration("20230428174944_AddGeomTransform")]
+    partial class AddGeomTransform
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -299,27 +302,6 @@ namespace MapViewerEngine.Server.Migrations
                     b.ToTable("OfficialShaders");
                 });
 
-            modelBuilder.Entity("MapViewerEngine.Server.Models.Vehicle", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    b.Property<int>("MeshId")
-                        .HasColumnType("int");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(255)
-                        .HasColumnType("varchar(255)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("MeshId");
-
-                    b.ToTable("Vehicles");
-                });
-
             modelBuilder.Entity("MapViewerEngine.Server.Models.OfficialBlock", b =>
                 {
                     b.HasOne("MapViewerEngine.Server.Models.Author", "Author")
@@ -400,17 +382,6 @@ namespace MapViewerEngine.Server.Migrations
                         .IsRequired();
 
                     b.Navigation("Collection");
-
-                    b.Navigation("Mesh");
-                });
-
-            modelBuilder.Entity("MapViewerEngine.Server.Models.Vehicle", b =>
-                {
-                    b.HasOne("MapViewerEngine.Server.Models.Mesh", "Mesh")
-                        .WithMany()
-                        .HasForeignKey("MeshId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
 
                     b.Navigation("Mesh");
                 });

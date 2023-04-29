@@ -3,6 +3,7 @@ using System;
 using MapViewerEngine.Server;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -10,9 +11,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace MapViewerEngine.Server.Migrations
 {
     [DbContext(typeof(MapViewerEngineContext))]
-    partial class MapViewerEngineContextModelSnapshot : ModelSnapshot
+    [Migration("20230429001857_AddGeomTransforms")]
+    partial class AddGeomTransforms
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder

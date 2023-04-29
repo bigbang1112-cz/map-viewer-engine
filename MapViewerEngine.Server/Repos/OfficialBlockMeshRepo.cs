@@ -35,18 +35,18 @@ public class OfficialBlockMeshRepo : IOfficialBlockMeshRepo
         if (IsInMemory)
         {
             return await context.OfficialBlockMeshes
+                .Include(bm => bm.Mesh)
                 .Include(bm => bm.OfficialBlock)
-                .Where(bm => bm.OfficialBlock.Name == block.Name && bm.Ground == block.Ground && bm.Variant == block.Variant && bm.SubVariant == block.SubVariant)
+                .Where(bm => bm.OfficialBlock.Name == block.Name && bm.OfficialBlock.CollectionId == block.CollectionId && bm.Ground == block.Ground && bm.Variant == block.Variant && bm.SubVariant == block.SubVariant)
                 .Select(bm => bm.Mesh.Data)
                 .FirstOrDefaultAsync(cancellationToken);
         }
 
         return await sql.Connection.QueryFirstOrDefaultAsync<byte[]?>(
-            @"SELECT m.Data 
-            FROM officialblockmeshes bm
+            @"SELECT m.Data FROM officialblockmeshes bm
             INNER JOIN meshes m ON bm.MeshId = m.id
             INNER JOIN officialblocks ob ON bm.OfficialBlockId = ob.id
-            WHERE ob.name = @Name AND bm.Ground = @Ground AND bm.Variant = @Variant AND bm.SubVariant = @SubVariant",
-            new { block.Name, block.Ground, block.Variant, block.SubVariant });
+            WHERE ob.name = @Name AND ob.CollectionId = @CollectionId AND bm.Ground = @Ground AND bm.Variant = @Variant AND bm.SubVariant = @SubVariant",
+            new { block.Name, block.CollectionId, block.Ground, block.Variant, block.SubVariant });
     }
 }

@@ -13,4 +13,11 @@ public class OfficialBlockMesh
     
     public int MeshId { get; set; }
     public required Mesh Mesh { get; set; }
+
+    public float GeomTranslationX { get; set; }
+    public float GeomTranslationY { get; set; }
+    public float GeomTranslationZ { get; set; }
+    public float GeomRotationX { get; set; }
+    public float GeomRotationY { get; set; }
+    public float GeomRotationZ { get; set; }
 }

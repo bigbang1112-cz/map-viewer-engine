@@ -1,3 +1,3 @@
 ﻿namespace MapViewerEngine.Shared;
 
-public record BlockVariant(string Name, bool Ground, int Variant, int SubVariant);
+public record BlockVariant(string Name, int CollectionId, bool Ground, int Variant, int SubVariant);

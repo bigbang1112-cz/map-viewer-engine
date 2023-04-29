@@ -13,4 +13,7 @@ public class OfficialShader
 
     [Column(TypeName = "blob")]
     public required byte[] Data { get; set; }
+
+    [StringLength(255)]
+    public required string Modifier { get; set; }
 }
