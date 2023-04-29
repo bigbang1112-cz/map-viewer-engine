@@ -31,13 +31,13 @@ public class OfficialShaderRepo : IOfficialShaderRepo
         if (IsInMemory)
         {
             return await context.OfficialShaders
-                .Where(s => s.Name == shaderName)
+                .Where(s => s.Name == shaderName && string.IsNullOrEmpty(s.Modifier))
                 .Select(s => s.Data)
                 .FirstOrDefaultAsync(cancellationToken);
         }
 
         return await sql.Connection.QueryFirstOrDefaultAsync<byte[]?>(
-            @"SELECT Data FROM OfficialShaders WHERE Name = @Name",
+            @"SELECT Data FROM OfficialShaders WHERE Name = @Name AND (Modifier = '' OR LENGTH(Modifier) = 0)",
             new { Name = shaderName });
     }
 }
