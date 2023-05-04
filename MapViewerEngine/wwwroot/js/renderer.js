@@ -67,9 +67,9 @@ export function addToScene(obj) {
     scene.add(obj);
 }
 
-export function animate() {
+export function animate(t) {
     animationRequestId = requestAnimationFrame(animate);
-
+    
     cam.animate();
 
     //stats.begin();
@@ -108,24 +108,6 @@ function onContextMenu(event) {
 }
 
 export function spawnSampleObjects() {
-    // Set up the scene and add objects
-    var geometry = new THREE.BoxGeometry(1, 1, 1);
-    var material = new THREE.MeshStandardMaterial({ color: 0x00ff00 });
-    var cube = new THREE.Mesh(geometry, material);
-    cube.receiveShadow = true;
-    cube.castShadow = true;
-    scene.add(cube);
-
-    const planeGeometry = new THREE.PlaneGeometry(10, 10, 10);
-    const planeMaterial = new THREE.MeshStandardMaterial({ color: 0xCCCCCC });
-    const planeMesh = new THREE.Mesh(planeGeometry, planeMaterial);
-    planeMesh.receiveShadow = true;
-    planeMesh.castShadow = true;
-    planeMesh.position.set(0, -1, 0);
-    planeMesh.rotation.x = -Math.PI / 2;
-
-    scene.add(planeMesh);
-
     // Create an ambient light
     var ambientLight = new THREE.AmbientLight(0x7F7F7F);
 
@@ -166,13 +148,14 @@ export function dispose() {
     renderer.domElement.removeEventListener('contextmenu', onContextMenu);
     renderer.domElement.removeEventListener('mousedown', onMouseDown);
     renderer.domElement.removeEventListener('mouseup', onMouseUp);
-    
+
     disposeInstances();
 
     while (scene.children.length) {
         scene.remove(scene.children[0]);
     }
     
+    cam.dispose();
     renderer.renderLists.dispose();
     renderer.dispose();
     renderer = null;

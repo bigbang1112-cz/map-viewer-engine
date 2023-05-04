@@ -5,50 +5,77 @@
 @using MapViewerEngine.Modules;
 @using MapViewerEngine.Shared;
 
-@inherits ToolComponentBase<MapViewerEngineTool>
+@inherits ToolComponentBase
 @implements IAsyncDisposable
 
 @inject IJSRuntime JS
 @inject IDynamicScriptService DynamicScript
 @inject MapViewerEngineHubConnection HubConnection
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject HttpClient Http
 
-<div class="container">
-    <div class="rectangle info-panel">
-        <div>FPS:</div>
-        <div>@FPS</div>
-        <div>Calls:</div>
-        <div>@Calls</div>
-        <div>Triangles:</div>
-        <div>@Triangles</div>
-        <div>Geometries:</div>
-        <div>@Geometries</div>
-        <div>Textures:</div>
-        <div>@Textures</div>
-    </div>
+<AuthorizeView>
+    <Authorized>
+        <div class="container">
+            <div class="rectangle info-panel">
+                <div>FPS:</div>
+                <div>@FPS</div>
+                <div>Calls:</div>
+                <div>@Calls</div>
+                <div>Triangles:</div>
+                <div>@Triangles</div>
+                <div>Geometries:</div>
+                <div>@Geometries</div>
+                <div>Textures:</div>
+                <div>@Textures</div>
+            </div>
 
-    @if (tool?.Map is not null)
-    {
-        <div class="map-name">
-            <FormattedText Text="@tool.Map.MapName" />
-            <div class="map-author">by <FormattedText Text="@(tool.Map.AuthorNickname ?? tool.Map.AuthorLogin)" /></div>
+            @if (tool?.Map is not null)
+            {
+                <div class="map-name">
+                    <FormattedText Text="@tool.Map.MapName" />
+                    <div class="map-author">by <FormattedText Text="@(tool.Map.AuthorNickname ?? tool.Map.AuthorLogin)" /></div>
+                </div>
+            }
+
+            @if (Exc is not null)
+            {
+                <div style="position: absolute;">@Exc</div>
+            }
+
+            @ChildContent
+
+            <canvas></canvas>
         </div>
-    }
+    </Authorized>
+    <NotAuthorized>
+        <div class="simply-centered">
+            This tool requires being logged in to better regulate its behaviour. Sorry for inconvenience.
+            <LoginButton></LoginButton>
+        </div>
+    </NotAuthorized>
+</AuthorizeView>
 
-    @if (Exc is not null)
-    {
-        <div style="position: absolute;">@Exc</div>
-    }
-
-    <canvas></canvas>
-</div>
 
 @code {
     private Timer? timer;
-    private MapViewerEngineTool? tool;
 
     private JSObject? renderer;
 
-    public MapViewerEngineTool Tool => tool ?? throw new Exception();
+    private CGameCtnChallenge? map;
+    private MapViewerEngineTool? tool;
+
+    [Parameter]
+    public EventCallback BeforeMapLoaded { get; set; }
+
+    [Parameter]
+    public EventCallback OnMapLoaded { get; set; }
+
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+
+    [Parameter]
+    public bool AutoStart { get; set; } = true;
 
     public string? Exc { get; set; }
 
@@ -62,20 +89,73 @@
     protected override void OnInitialized()
     {
         timer = new Timer(TimerCallback, null, 0, RefreshInterval);
+    }
 
-        var map = this.GbxSelection.FirstOrDefault()?.Object?.Node as CGameCtnChallenge;
+    protected override async Task OnParametersSetAsync()
+    {
+        if (!AutoStart)
+        {
+            return;
+        }
 
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+
+        if (authState.User.Identity is null)
+        {
+            return;
+        }
+        
+        if (tool is not null)
+        {
+            return;
+        }
+
+        await base.OnParametersSetAsync();
+
+        switch (ProceedType.ToLowerInvariant())
+        {
+            case "selected":
+                map = this.GbxSelection.FirstOrDefault()?.Object?.Node as CGameCtnChallenge;
+                break;
+            case "mx":
+                if (!QueryParameters.TryGetValue("site", out string? site))
+                {
+                    throw new Exception("Missing site query parameter");
+                }
+
+                if (!QueryParameters.TryGetValue("trackid", out string? trackId))
+                {
+                    throw new Exception("Missing trackid query parameter");
+                }
+
+                using (var response = await Http.GetAsync($"api/v1/mx/track/{site}/{trackId}"))
+                {
+                    if (response.IsSuccessStatusCode)
+                    {
+                        using var stream = await response.Content.ReadAsStreamAsync();
+                        map = GameBox.ParseNode<CGameCtnChallenge>(stream);
+                    }
+                }
+                break;
+            default:
+                break;
+        }
+        
         if (map is null)
         {
             return;
         }
 
         tool = new MapViewerEngineTool(map) { HubConnection = HubConnection };
+
+        await StartAsync(tool);
     }
 
-    protected override async Task OnAfterRenderAsync(bool firstRender)
+    public async Task StartAsync(MapViewerEngineTool tool)
     {
-        if (!firstRender)
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+
+        if (authState.User.Identity is null)
         {
             return;
         }
@@ -86,6 +166,9 @@
         await JSHost.ImportAsync(nameof(Solid), "../_content/MapViewerEngine/js/solid.js");
         await JSHost.ImportAsync(nameof(Shader), "../_content/MapViewerEngine/js/shader.js");
 
+        //await JSHost.ImportAsync("anime", "../_content/MapViewerEngine/js/anime.es.js");
+        await JSHost.ImportAsync(nameof(Timeline), "../_content/MapViewerEngine/js/timeline.js");
+
         renderer = Renderer.Create();
         Renderer.CreateScene();
         var cam = Cam.Create(distance: 256);
@@ -94,19 +177,18 @@
 
         Renderer.Animate();
 
-        if (tool is null)
-        {
-            return;
-        }
+        Cam.SetTarget(tool.AbsoluteTrueMapCenter.X, 48, tool.AbsoluteTrueMapCenter.Z);
 
-        Cam.Move(Tool.AbsoluteTrueMapCenter.X, 48, Tool.AbsoluteTrueMapCenter.Z);
+        await BeforeMapLoaded.InvokeAsync();
 
-        await Tool.LoadAsync();
+        await tool.LoadAsync();
+
+        await OnMapLoaded.InvokeAsync();
     }
 
     private int? framesBefore;
 
-    private void TimerCallback(object? state)
+    protected void TimerCallback(object? state)
     {
         var info = renderer?.GetPropertyAsJSObject("info");
 
@@ -148,9 +230,15 @@
         }
 
         await HubConnection.StopAsync();
-        
+
         timer?.Dispose();
-        Renderer.Dispose();
+
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+
+        if (authState.User.Identity is not null)
+        {
+            Renderer.Dispose();
+        }
 
         await base.DisposeAsync(disposing);
     }

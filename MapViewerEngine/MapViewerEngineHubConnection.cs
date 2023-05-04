@@ -5,7 +5,7 @@ using Microsoft.Extensions.Logging;
 
 namespace MapViewerEngine;
 
-public delegate Task BlockMeshHandler(BlockVariant block, byte[] data);
+public delegate Task BlockMeshHandler(BlockVariant block, BlockData data);
 public delegate Task MeshHandler(Guid guid, byte[] data);
 public delegate Task MetaHandler(string blockName, string collection, byte[] data);
 public delegate Task MetasHandler(OfficialBlockMeta[] metas);
@@ -22,7 +22,7 @@ public partial class MapViewerEngineHubConnection : ToolHubConnection
 
     public MapViewerEngineHubConnection(string baseAddress, ILogger? logger = null) : base(baseAddress, logger)
     {
-        Connection.On<BlockVariant, byte[]>("BlockMesh", OnBlockMesh);
+        Connection.On<BlockVariant, BlockData>("BlockMesh", OnBlockMesh);
         Connection.On<Guid, byte[]>("Mesh", OnMesh);
         Connection.On<string, string, byte[]>("Meta", OnMeta);
         Connection.On<OfficialBlockMeta[]>("Metas", OnMetas);
@@ -34,7 +34,7 @@ public partial class MapViewerEngineHubConnection : ToolHubConnection
         return await Connection.InvokeAsync<string>("Ping", cancellationToken);
     }
 
-    protected virtual async Task OnBlockMesh(BlockVariant block, byte[] data)
+    protected virtual async Task OnBlockMesh(BlockVariant block, BlockData data)
     {
         if (BlockMesh is not null)
         {
@@ -102,5 +102,10 @@ public partial class MapViewerEngineHubConnection : ToolHubConnection
     public async Task<byte[]> InvokeSceneAsync(string collection, int sizeX, int sizeZ, CancellationToken cancellationToken = default)
     {
         return await Connection.InvokeAsync<byte[]>("Scene", collection, sizeX, sizeZ, cancellationToken);
+    }
+
+    public async Task<VehicleData> InvokeVehicleAsync(string vehicleName, CancellationToken cancellationToken = default)
+    {
+        return await Connection.InvokeAsync<VehicleData>("Vehicle", vehicleName, cancellationToken);
     }
 }

@@ -37,7 +37,7 @@ function createBlendShader(texture1, texture2, blendMap) {
 }
 
 var waterMaterial = new THREE.MeshStandardMaterial({
-    color: 0x52889E,
+    color: 0x4D8ED0,
     transparent: true,
     opacity: 0.5
 });
@@ -52,7 +52,9 @@ export function create(name) {
         || name == "CoastFoam"
         || name == "RallyWater"
         || name == "RallyWarpLake"
-        || name == "StadiumWater") {
+        || name == "StadiumWater"
+        || name == "IslandSea"
+        || name == "IslandWarpSea") {
         return waterMaterial;
     }
 
@@ -60,8 +62,7 @@ export function create(name) {
     let opacity = 1;
     let transparent = false;
 
-    if (name == "StadiumGrassFence") {
-        color = 0x3D5831;
+    if (name == "StadiumGrassFence" || name.includes("Collision")) {
         opacity = 0;
         transparent = true;
     }

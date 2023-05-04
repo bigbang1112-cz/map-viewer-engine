@@ -12,7 +12,7 @@ public interface IMapViewerEngineHub
     string Ping();
 }
 
-//[Authorize]
+[Authorize]
 public class MapViewerEngineHub : Hub, IMapViewerEngineHub
 {
     private readonly IMapViewerEngineUnitOfWork unitOfWork;
@@ -164,6 +164,30 @@ public class MapViewerEngineHub : Hub, IMapViewerEngineHub
         {
             // Shouldn't happen or subject to more intense rate limiting
             throw new Exception($"Shouldn't happen or subject to more intense rate limiting ({collection}, {sizeX}, {sizeZ})");
+        }
+
+        cache.Set(cacheKey, data, TimeSpan.FromHours(1));
+
+        return data;
+    }
+
+    public async Task<VehicleData> Vehicle(string vehicleName)
+    {
+        _ = vehicleName ?? throw new ArgumentNullException(nameof(vehicleName));
+
+        var cacheKey = $"Vehicle:{vehicleName}";
+
+        if (cache.TryGetValue(cacheKey, out VehicleData? data) && data is not null)
+        {
+            return data;
+        }
+
+        data = await unitOfWork.Vehicles.GetDataAsync(vehicleName);
+
+        if (data is null)
+        {
+            // Shouldn't happen or subject to more intense rate limiting
+            throw new Exception($"Shouldn't happen or subject to more intense rate limiting ({vehicleName})");
         }
 
         cache.Set(cacheKey, data, TimeSpan.FromHours(1));

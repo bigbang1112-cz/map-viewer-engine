@@ -2,7 +2,7 @@
 
 namespace MapViewerEngine.Modules;
 
-internal static partial class Renderer
+public static partial class Renderer
 {
     [JSImport("create", nameof(Renderer))]
     internal static partial JSObject Create();
@@ -11,7 +11,7 @@ internal static partial class Renderer
     internal static partial JSObject CreateScene();
 
     [JSImport("addToScene", nameof(Renderer))]
-    internal static partial JSObject AddToScene(JSObject obj);
+    public static partial JSObject AddToScene(JSObject obj);
 
     [JSImport("animate", nameof(Renderer))]
     internal static partial void Animate();

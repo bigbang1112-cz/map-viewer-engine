@@ -28,6 +28,16 @@ export function set_tree_rot(tree, xx, xy, xz, yx, yy, yz, zx, zy, zz) {
     tree.rotation.setFromRotationMatrix(new THREE.Matrix4().set(xx, xy, xz, 0, yx, yy, yz, 0, zx, zy, zz, 0, 0, 0, 0, 1));
 }
 
+export function setTreeRotDeg(tree, yaw, pitch, roll) {
+    tree.rotateX(THREE.MathUtils.degToRad(pitch));
+    tree.rotateY(THREE.MathUtils.degToRad(yaw));
+    tree.rotateZ(THREE.MathUtils.degToRad(roll));
+}
+
+export function setTreeQuat(tree, x, y, z, w) {
+    tree.quaternion.set(x, y, z, w);
+}
+
 export function create_lod() {
     return new THREE.LOD();
 }

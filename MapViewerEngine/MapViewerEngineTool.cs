@@ -109,7 +109,10 @@ public class MapViewerEngineTool : ITool, IHasUI, IHubConnection<MapViewerEngine
 
     public async Task LoadAsync(CancellationToken cancellationToken = default)
     {
-        await HubConnection.StartAsync(cancellationToken);
+        if (!HubConnection.Started)
+        {
+            await HubConnection.StartAsync(cancellationToken);
+        }
         
         HubConnection.BlockMesh += SaveBlockMesh;
         HubConnection.Metas += SaveMetas;
@@ -180,10 +183,12 @@ public class MapViewerEngineTool : ITool, IHasUI, IHubConnection<MapViewerEngine
     }
 
 
-    private async Task SaveBlockMesh(BlockVariant block, byte[] data)
+    private async Task SaveBlockMesh(BlockVariant block, BlockData data)
     {
-        var obj = await Solid.ParseAsync(data, BlockCountPerModel[block]);
+        var obj = await Solid.ParseAsync(data.Data, BlockCountPerModel[block]);
 
+        Solid.SetTreeRot(obj, data.GeomRotationX, data.GeomRotationY, data.GeomRotationZ);
+        Solid.SetTreePos(obj, data.GeomTranslationX, data.GeomTranslationY, data.GeomTranslationZ);
         Solid.AddUserData(obj, block.Name, block.Ground, block.Variant, block.SubVariant);
 
         CachedSolids.Add(block, obj);
@@ -256,7 +261,7 @@ public class MapViewerEngineTool : ITool, IHasUI, IHubConnection<MapViewerEngine
     {
         var blockName = Map.Collection.ToString() switch
         {
-            "Desert" or "Speed" => "Canyon",
+            "Desert" or "Speed" => "SpeedBase",
             "Snow" or "Alpine" => "AlpineSnowBase",
             "Rally" => "RallyFlat",
             "Island" => "IslandSea",
@@ -288,7 +293,7 @@ public class MapViewerEngineTool : ITool, IHasUI, IHubConnection<MapViewerEngine
 
     private async Task CreateSceneAsync(CancellationToken cancellationToken)
     {
-        if (!CachedScenes.TryGetValue((Map.Collection, MapSize.X, MapSize.Z), out var sceneObj))
+        if (!CachedScenes.TryGetValue((Map.Collection.ToString(), MapSize.X, MapSize.Z), out var sceneObj))
         {
             byte[] sceneMesh;
             
@@ -302,12 +307,13 @@ public class MapViewerEngineTool : ITool, IHasUI, IHubConnection<MapViewerEngine
             }
 
             sceneObj = await Solid.ParseAsync(sceneMesh, 1);
-            CachedScenes.Add((Map.Collection, MapSize.X, MapSize.Z), sceneObj);
+            CachedScenes.Add((Map.Collection.ToString(), MapSize.X, MapSize.Z), sceneObj);
 
             var sceneYOffset = Map.Collection.ToString() switch
             {
+                "Speed" or "Desert" => -0.25,
                 "Stadium" => EnvBlockSize.Y + 1,
-                "Bay" => 2 * EnvBlockSize.Y,
+                "Bay" or "Island" => 2 * EnvBlockSize.Y,
                 "Coast" => 3 * EnvBlockSize.Y,
                 _ => 0
             };
@@ -335,7 +341,14 @@ public class MapViewerEngineTool : ITool, IHasUI, IHubConnection<MapViewerEngine
 
     public void InstantiateDefaultZoneSolids(JSObject tree)
     {
+        if (ZoneVariant is null)
+        {
+            throw new Exception("ZoneVariant shouldn't be null here");
+        }
+
         Solid.Instantiate(tree, ZoneBlockPlacements, 1, 1, EnvBlockSize.X, EnvBlockSize.Y, EnvBlockSize.Z);
+        
+        InstantiateSolids(tree, ZoneVariant, new() { AirBlockSize = (1, 1, 1), GroundBlockSize = (1, 1, 1), PageName = "" });
     }
 
     public void InstantiateSolids(JSObject tree, BlockVariant variant, Meta meta)
@@ -367,8 +380,8 @@ public class MapViewerEngineTool : ITool, IHasUI, IHubConnection<MapViewerEngine
 
         var additionalY = Map.Collection.ToString() switch
         {
-            "Speed" or "Desert" => 1,
-            "Stadium" or "Alpine" => -1,
+            "Speed" or "Desert" => -1,
+            "Stadium" or "Alpine" or "Island" => -1,
             "Rally" => -2,
             "Coast" => -3,
             _ => 0

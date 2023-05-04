@@ -2,12 +2,29 @@ let cam;
 let cam_target;
 let cam_spherical;
 let isShiftKeyDown = false;
+let lockedTo;
+let currentCamPos = null;
 
 const moveSpeed = 0.002;
 const rotateSpeed = 0.004;
 
 export function getCam() {
     return cam;
+}
+
+export function getCamTarget() {
+    return cam_target;
+}
+
+export function setCamTarget(x, y, z, smooth) {
+    cam_target.set(x, y, z);
+
+    if (smooth) {
+        currentCamPos = getCartesianCoordinates(cam_target);
+    }
+    else {
+        currentCamPos = null;
+    }
 }
 
 export function create(distance) {
@@ -24,20 +41,41 @@ export function create(distance) {
     return cam;
 }
 
-export function animate() {
-    // Convert spherical coordinates to cartesian coordinates
-    const position = new THREE.Vector3().setFromSpherical(cam_spherical).add(cam_target);
+var clock = new THREE.Clock();
 
-    // Set camera position and look at target
-    cam.position.copy(position);
+export function animate() {
+
+    if (lockedTo != null) {
+        cam_target = lockedTo.position;
+    }
+
+    // Convert spherical coordinates to cartesian coordinates
+    const position = getCartesianCoordinates(cam_target);
+
+    const delta = clock.getDelta();
+
+    if (currentCamPos != null) {
+        currentCamPos.set(
+            THREE.MathUtils.damp(currentCamPos.x, position.x, 12, delta),
+            THREE.MathUtils.damp(currentCamPos.y, position.y, 12, delta),
+            THREE.MathUtils.damp(currentCamPos.z, position.z, 12, delta)
+        );
+        
+        cam.position.copy(currentCamPos);
+    }
+    else {
+        cam.position.copy(position);
+    }
+    
     cam.lookAt(cam_target);
 }
 
-export function move(x, y, z) {
-    cam_target.set(x, y, z);
+function getCartesianCoordinates(target) {
+    return new THREE.Vector3().setFromSpherical(cam_spherical).add(target);
 }
 
 export function dispose() {
+    lockedTo = null;
     document.removeEventListener('keydown', onKeyDown);
     document.removeEventListener('keyup', onKeyUp);
 }
@@ -86,7 +124,7 @@ export function onMouseUp(event) {
 
 export function onMouseMove(event) {
     if (mouseDown) {
-        if (event.buttons === 1) {
+        if (event.buttons === 1 && lockedTo == null) {
             if (isShiftKeyDown) {
                 const vector = new THREE.Vector3(-event.movementX * moveSpeed * cam_spherical.radius, event.movementY * moveSpeed * cam_spherical.radius, 0);
                 vector.applyQuaternion(cam.quaternion);
@@ -127,4 +165,12 @@ export function onMouseWheel(event) {
 
     // Ensure the radius stays within the desired range
     cam_spherical.radius = Math.min(Math.max(cam_spherical.radius, 1), 256);
+}
+
+export function lockTo(obj) {
+    lockedTo = obj;
+}
+
+export function changeDistance(distance) {
+    cam_spherical.radius = distance;
 }

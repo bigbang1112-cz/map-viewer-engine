@@ -1,14 +1,13 @@
 ﻿using GBX.NET;
-using MapViewerEngine.Modules;
 using System;
 using System.IO.Compression;
 using System.Numerics;
 using System.Runtime.InteropServices;
 using System.Runtime.InteropServices.JavaScript;
 
-namespace MapViewerEngine;
+namespace MapViewerEngine.Modules;
 
-internal static partial class Solid
+public static partial class Solid
 {
     private static readonly byte[] MAGIC = new byte[] { 0xD4, 0x54, 0x35, 0x84, 0x02 };
     
@@ -27,10 +26,16 @@ internal static partial class Solid
     internal static partial void AddToTree(JSObject parent, JSObject child);
 
     [JSImport("set_tree_pos", nameof(Solid))]
-    internal static partial void SetTreePos(JSObject tree, double x, double y, double z);
+    public static partial void SetTreePos(JSObject tree, double x, double y, double z);
+
+    [JSImport("setTreeRotDeg", nameof(Solid))]
+    internal static partial void SetTreeRot(JSObject tree, double pitch, double yaw, double roll);
 
     [JSImport("set_tree_rot", nameof(Solid))]
     internal static partial void SetTreeRot(JSObject tree, double xx, double xy, double xz, double yx, double yy, double yz, double zx, double zy, double zz);
+    
+    [JSImport("setTreeQuat", nameof(Solid))]
+    public static partial void SetTreeQuat(JSObject tree, double x, double y, double z, double w);
 
     [JSImport("create_visual", nameof(Solid))]
     internal static partial JSObject CreateVisual([JSMarshalAs<JSType.MemoryView>] Span<byte> vertices, [JSMarshalAs<JSType.MemoryView>] Span<int> indices, [JSMarshalAs<JSType.MemoryView>] Span<byte> uvs, int expectedMeshCount);
