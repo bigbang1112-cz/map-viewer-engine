@@ -13,7 +13,7 @@ public class CollectionsEndpoint : IToolEndpoint
     {
         app.MapGet("collections", GetAllCollections);
         app.MapGet("collections/{id}", GetCollection);
-        app.MapPost("collections/add", AddCollection).RequireAuthorization();
+        app.MapPost("collections/add", AddCollection).RequireAuthorization(Policies.SuperAdminPolicy);
     }
 
     private async Task<IResult> GetAllCollections(ICollectionRepo repo, CancellationToken cancellationToken)
