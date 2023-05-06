@@ -104,7 +104,7 @@
         {
             return;
         }
-        
+
         if (tool is not null)
         {
             return;
@@ -140,7 +140,7 @@
             default:
                 break;
         }
-        
+
         if (map is null)
         {
             return;
@@ -153,6 +153,8 @@
 
     public async Task StartAsync(MapViewerEngineTool tool)
     {
+        this.tool = tool;
+
         var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
 
         if (authState.User.Identity is null)
