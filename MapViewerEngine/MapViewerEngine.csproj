@@ -9,6 +9,8 @@
 	</PropertyGroup>
 
 	<ItemGroup>
+	  <PackageReference Include="GbxToolAPI" Version="1.0.3" />
+	  <PackageReference Include="GbxToolAPI.Client" Version="1.0.0" />
 	  <PackageReference Include="Microsoft.AspNetCore.Components.Authorization" Version="7.0.5" />
 	</ItemGroup>
 
@@ -17,9 +19,6 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<ProjectReference Include="..\GbxToolAPI\Generators\GbxToolAPI.Client.Generators\GbxToolAPI.Client.Generators.csproj" />
-		<ProjectReference Include="..\GbxToolAPI\Src\GbxToolAPI\GbxToolAPI.csproj" />
-		<ProjectReference Include="..\GbxToolAPI\Src\GbxToolAPI.Client\GbxToolAPI.Client.csproj" />
 		<ProjectReference Include="..\MapViewerEngine.Shared\MapViewerEngine.Shared.csproj" />
 	</ItemGroup>
 
