@@ -120,9 +120,12 @@ public class MapViewerEngineTool : ITool, IHasUI, IHubConnection<MapViewerEngine
 
         var uniqueBlockNames = GetBlocks().Select(x => x.Name).Distinct().ToList();
 
-        var blockInfosToRequest = uniqueBlockNames.Where(x => !CachedMetas.ContainsKey(x)).ToList();
+        var blockInfosToRequest = uniqueBlockNames.Where(x => !CachedMetas.ContainsKey(x)).Chunk(100);
 
-        await HubConnection.SendMetasAsync(blockInfosToRequest, Map.Collection, "Nadeo", cancellationToken);
+        foreach (var blockInfoRequestChunk in blockInfosToRequest)
+        {
+            await HubConnection.SendMetasAsync(blockInfoRequestChunk, Map.Collection, "Nadeo", cancellationToken);
+        }
 
         var uniqueBlockVariants = GetBlocks().GroupBy(x => new { x.Name, x.IsGround, x.Variant, x.SubVariant })
             .Select(x => new BlockVariant(x.Key.Name, CollectionId, x.Key.IsGround, x.Key.Variant.GetValueOrDefault(), x.Key.SubVariant.GetValueOrDefault()))

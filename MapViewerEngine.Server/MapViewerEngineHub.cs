@@ -38,7 +38,7 @@ public class MapViewerEngineHub : Hub, IMapViewerEngineHub
         if (data is null)
         {
             // Shouldn't happen or subject to more intense rate limiting
-            throw new Exception("Shouldn't happen or subject to more intense rate limiting");
+            throw new Exception($"Shouldn't happen or subject to more intense rate limiting ({block} not found)");
         }
 
         await Clients.Caller.SendAsync("BlockMesh", block, data);
@@ -63,7 +63,7 @@ public class MapViewerEngineHub : Hub, IMapViewerEngineHub
         if (data is null)
         {
             // Shouldn't happen or subject to more intense rate limiting
-            throw new Exception("Shouldn't happen or subject to more intense rate limiting");
+            throw new Exception($"Shouldn't happen or subject to more intense rate limiting ({blockName}+{collection}+{author} not found)");
         }
 
         cache.Set(cacheKey, data, TimeSpan.FromHours(1));
@@ -116,7 +116,7 @@ public class MapViewerEngineHub : Hub, IMapViewerEngineHub
 
         if (data.Count == 0)
         {
-            throw new Exception("Shouldn't happen or subject to more intense rate limiting");
+            throw new Exception("Shouldn't happen or subject to more intense rate limiting (no data found)");
         }
 
         await Clients.Caller.SendAsync("Metas", data);
