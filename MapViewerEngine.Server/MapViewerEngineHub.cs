@@ -41,6 +41,7 @@ public class MapViewerEngineHub : Hub, IMapViewerEngineHub
             throw new Exception($"Shouldn't happen or subject to more intense rate limiting ({block} not found)");
         }
 
+        var totalDataSize = data.Data.Length;
         await Clients.Caller.SendAsync("BlockMesh", block, data);
     }
 
@@ -54,6 +55,7 @@ public class MapViewerEngineHub : Hub, IMapViewerEngineHub
 
         if (cache.TryGetValue(cacheKey, out byte[]? blockMeta) && blockMeta is not null)
         {
+            var totalDataSize = blockMeta.Length;
             await Clients.Caller.SendAsync("Meta", blockName, collection, blockMeta);
             return;
         }
@@ -108,16 +110,21 @@ public class MapViewerEngineHub : Hub, IMapViewerEngineHub
             }
         }
 
+        var totalDataSize = 0;
+
         foreach (var meta in await unitOfWork.OfficialBlocks.GetMetasByMultipleIdentsAsync(metasToRequest, collection, author))
         {
             data.Add(meta);
             cache.Set($"Meta:{meta.Name}:{collection}:{author}", meta.Meta, TimeSpan.FromHours(1));
+            totalDataSize += meta.Meta.Length;
         }
 
         if (data.Count == 0)
         {
             throw new Exception("Shouldn't happen or subject to more intense rate limiting (no data found)");
         }
+
+        
 
         await Clients.Caller.SendAsync("Metas", data);
     }

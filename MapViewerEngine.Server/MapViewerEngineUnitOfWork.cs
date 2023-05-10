@@ -31,6 +31,9 @@ public class MapViewerEngineUnitOfWork : IMapViewerEngineUnitOfWork
     public IOfficialShaderRepo OfficialShaders { get; }
     public IOfficialSceneRepo OfficialScenes { get; }
     public IVehicleRepo Vehicles { get; }
+    public IUserRepo Users { get; }
+    public IUserRequestRepo UserRequests { get; }
+    public IUserTrafficRepo UserTraffic { get; }
 
     public MapViewerEngineUnitOfWork(MapViewerEngineContext context, ISqlConnection<MapViewerEngineServer> sql, IOptions<DatabaseOptions> databaseOptions)
     {
@@ -43,6 +46,9 @@ public class MapViewerEngineUnitOfWork : IMapViewerEngineUnitOfWork
         OfficialShaders = new OfficialShaderRepo(context, sql, databaseOptions);
         OfficialScenes = new OfficialSceneRepo(context, sql, databaseOptions);
         Vehicles = new VehicleRepo(context, sql, databaseOptions);
+        Users = new UserRepo(context, sql, databaseOptions);
+        UserRequests = new UserRequestRepo(context, sql, databaseOptions);
+        UserTraffic = new UserTrafficRepo(context, sql, databaseOptions);
     }
 
     public void Save()
