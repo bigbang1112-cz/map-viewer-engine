@@ -43,7 +43,7 @@ public class OfficialBlockMeshRepo : IOfficialBlockMeshRepo
         }
 
         return await sql.Connection.QueryFirstOrDefaultAsync<BlockData?>(
-            @"SELECT m.Data, bm.GeomTranslationX, bm.GeomTranslationY, bm.GeomTranslationZ, bm.GeomRotationX, bm.GeomRotationY, bm.GeomRotationZ FROM officialblockmeshes bm
+            @"SELECT m.Data, bm.GeomTranslationX, bm.GeomTranslationY, bm.GeomTranslationZ, bm.GeomRotationX, bm.GeomRotationY, bm.GeomRotationZ FROM OfficialBlockMeshes bm
             INNER JOIN meshes m ON bm.MeshId = m.id
             INNER JOIN officialblocks ob ON bm.OfficialBlockId = ob.id
             WHERE ob.name = @Name AND ob.CollectionId = @CollectionId AND bm.Ground = @Ground AND bm.Variant = @Variant AND bm.SubVariant = @SubVariant",
